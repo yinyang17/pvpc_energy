@@ -1,5 +1,5 @@
 """The PVPC Energy integration."""
-from .const import DOMAIN, CURRENT_BILL_STATE, CONSUMPTION_STATISTIC_ID, CONSUMPTION_STATISTIC_NAME, COST_STATISTIC_ID, COST_STATISTIC_NAME, ENERGY_FILE, BILLING_PERIODS_FILE
+from .const import DOMAIN, CURRENT_BILL_STATE, CONSUMPTION_STATISTIC_ID, CONSUMPTION_STATISTIC_NAME, COST_STATISTIC_ID, COST_STATISTIC_NAME, USER_FILES_PATH, ENERGY_FILE, BILLING_PERIODS_FILE
 from homeassistant.components.recorder import get_instance
 from homeassistant.components.recorder.models import StatisticData, StatisticMetaData
 from homeassistant.components.recorder.statistics import (async_add_external_statistics, get_last_statistics, statistics_during_period, )
@@ -7,6 +7,7 @@ from homeassistant.helpers.event import async_track_time_change
 import datetime
 import time
 from os.path import exists
+from os import makedirs
 import requests
 import random
 import base64
@@ -25,6 +26,9 @@ def setup(hass, config):
     UFD.power_low = config['pvpc_energy']['power_low']
     UFD.zip_code = config['pvpc_energy']['zip_code']
     UFD.bills_number = config['pvpc_energy']['bills_number']
+
+    if not exists(USER_FILES_PATH):
+        makedirs(USER_FILES_PATH)
 
     hass.services.register(DOMAIN, "import_energy_data", handle_import_energy_data)
     async_track_time_change(hass, handle_import_energy_data, hour=7, minute=5, second=0)
