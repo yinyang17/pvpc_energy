@@ -31,7 +31,7 @@ It takes a few minutes the fetch available data (about two years). After this ti
 
 
 ## Panels
-Add to Energy panel the electricity consumption "PVPC: Consumo" and entity with total costs "PVPC: Coste"
+Add to Energy panel the electricity consumption "PVPC: Consumo" and entity with total costs "PVPC: Coste".
 Add to Lovelace a Markdown card to show the last bills indicating in content:
 ```yml
 {{ state_attr('pvpc_energy.current_bill', 'detail')}}
