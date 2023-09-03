@@ -1,0 +1,6 @@
+{
+  "name": "Electricity consumption import from UFD Distribución Electricidad S.A.",
+  "country": "ES",
+  "render_readme": true,
+  "persistent_directory": "user_files"
+}

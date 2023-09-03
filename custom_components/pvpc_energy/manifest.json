@@ -1,0 +1,13 @@
+{
+  "domain": "pvpc_energy",
+  "name": "PVPC Energy",
+  "documentation":"https://github.com/yinyang17/pvpc_energy",
+  "issue_tracker":"https://github.com/yinyang17/pvpc_energy/issues",
+  "codeowners": [
+    "@yinyang17"
+  ],
+  "dependencies": [],
+  "iot_class": "cloud_polling",
+  "requirements": [],
+  "version": "0.1.0"
+}
