@@ -1,10 +1,10 @@
 # pvpc_energy
-(https://github.com/yinyang17/pvpc_energy/raw/main/assets/logo-ufd.png) (https://github.com/yinyang17/pvpc_energy/raw/main/assets/logo-esios.svg) (https://github.com/yinyang17/pvpc_energy/raw/main/assets/logo-cnmc.png)
+![UFD logo](https://github.com/yinyang17/pvpc_energy/raw/main/assets/logo-ufd.png) ![ESIOS logo](https://github.com/yinyang17/pvpc_energy/raw/main/assets/logo-esios.svg) ![CNMC logo](https://github.com/yinyang17/pvpc_energy/raw/main/assets/logo-cnmc.png)
 Imports electric consumption and cost from ufd.es and ree.es. Calculate current and past bills from cnmc.gob.es
 
-(https://github.com/yinyang17/pvpc_energy/raw/main/assets/energy-monthly.png)
-(https://github.com/yinyang17/pvpc_energy/raw/main/assets/energy-daily.png)
-(https://github.com/yinyang17/pvpc_energy/raw/main/assets/bills.png)
+![Monthly consumption](https://github.com/yinyang17/pvpc_energy/raw/main/assets/energy-monthly.png)
+![Daily consumption](https://github.com/yinyang17/pvpc_energy/raw/main/assets/energy-daily.png)
+![Bills](https://github.com/yinyang17/pvpc_energy/raw/main/assets/bills.png)
 
 ## Instalation and configuration
 You need to be registered on https://www.ufd.es.
@@ -39,10 +39,10 @@ It takes a few minutes the fetch available data (about two years). After this ti
 Add consumption to Electricity grid in Energy Dashboard:
 * sensor which measures grid consumption: "PVPC: Consumo"
 * Use an entity tracking the total costs: "PVPC: Coste"
-(https://github.com/yinyang17/pvpc_energy/raw/main/assets/grid-consumption-configuration.png)
+![Grid consumption configuration](https://github.com/yinyang17/pvpc_energy/raw/main/assets/grid-consumption-configuration.png)
 
 Add to Lovelace a Markdown card to show the last bills indicating in content:
 ```yml
 {{ state_attr('pvpc_energy.current_bill', 'detail')}}
 ```
-(https://github.com/yinyang17/pvpc_energy/raw/main/assets/markdown-card-config.png)
+![Markdown card configuration](https://github.com/yinyang17/pvpc_energy/raw/main/assets/markdown-card-config.png)
