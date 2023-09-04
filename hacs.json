@@ -1,5 +1,5 @@
 {
-  "name": "Spain electricity consumption import from ufd.es",
+  "name": "UFD electricity consumption import (Spain)",
   "country": "ES",
   "render_readme": true,
   "persistent_directory": "user_files"
