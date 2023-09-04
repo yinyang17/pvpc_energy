@@ -2,8 +2,7 @@
 ![UFD logo](https://github.com/yinyang17/pvpc_energy/raw/main/assets/logo-ufd.png) ![ESIOS logo](https://github.com/yinyang17/pvpc_energy/raw/main/assets/logo-esios.png) ![CNMC logo](https://github.com/yinyang17/pvpc_energy/raw/main/assets/logo-cnmc.png)
 Imports electric consumption and cost from ufd.es and ree.es. Calculate current and past bills from cnmc.gob.es
 
-![Monthly consumption](https://github.com/yinyang17/pvpc_energy/raw/main/assets/energy-monthly.png)
-![Daily consumption](https://github.com/yinyang17/pvpc_energy/raw/main/assets/energy-daily.png)
+![Daily consumption](https://github.com/yinyang17/pvpc_energy/raw/main/assets/energy-daily.png)![Monthly consumption](https://github.com/yinyang17/pvpc_energy/raw/main/assets/energy-monthly.png)
 ![Bills](https://github.com/yinyang17/pvpc_energy/raw/main/assets/bills.png)
 
 ## Instalation and configuration
