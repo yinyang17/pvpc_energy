@@ -426,8 +426,15 @@ class UFD:
             response = None
             _LOGGER.info(f"UFD.get_consumptions(start_date={request_end_date.isoformat()}, end_date={request_start_date.isoformat()})")
             r = await hass.async_add_executor_job(get, url, headers)
+            if r.status_code == 401:
+                _LOGGER.debug(f"Unauthorized: {r.status_code}")
+                UFD.token = ''
+                headers=UFD.getHeaders()
+                r = requests.get(url, headers=headers)
             if r.status_code == 200:
                 response = r.json()
+            else:
+                _LOGGER.error(f"status_code: {r.status_code}, response: {r.text}")
             if response is not None and 'items' in response:
                 for dayConsumption in response['items']:
                     timestamp = int(time.mktime(time.strptime(dayConsumption['periodStartDate'], '%d/%m/%Y')))
