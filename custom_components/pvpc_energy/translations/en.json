@@ -1,0 +1,19 @@
+{
+    "config": {
+      "step": {
+        "user": {
+            "title": "UFD",
+            "description": "Enter de UFD credentials and data",
+            "data": {
+                "ufd_login": "UFD login",
+                "ufd_password": "UFD password",
+                "cups": "CUPS",
+                "power_high": "High power",
+                "power_low": "Low power",
+                "zip_code": "Zip code",
+                "bills_number": "Number of bills to show in Markdown Card"
+            }
+        }
+      }
+    }
+  }

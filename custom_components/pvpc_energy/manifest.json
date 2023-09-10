@@ -6,6 +6,7 @@
   "codeowners": [
     "@yinyang17"
   ],
+  "config_flow": true,
   "dependencies": [],
   "iot_class": "cloud_polling",
   "requirements": [],

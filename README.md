@@ -7,25 +7,15 @@ Imports electric consumption and cost from ufd.es and ree.es. Calculate current 
 
 ## Instalation and configuration
 You need to be registered on https://www.ufd.es.
-After restart add the following configuration to configuration.yaml, indicating UFD data:
-```yaml
-pvpc_energy:
-  ufd_login: ''
-  ufd_password: ''
-  cups: ''
-  zip_code: ''
-  power_high: 4.6
-  power_low: 4.6
-  bills_number: 5
-```
+After restart add integration indicating UFD credentials and number of bills to show in the Markdown Card.
+Consumptions and billing data are stored in "user_files" directory. Add them to this directory if you have data from previous installations.
 
-Restart again to activate the integration. When Home Assistant starts the integration gets available data from:
+## Output
+After add the integration it gets available data from:
 * https://www.ufd.es: Electricity consumptions and billings periods
 * https://api.esios.ree.es: Hourly energy prices
 * https://comparador.cnmc.gob.es/facturaluz/inicio: PVPC bills simulation
 
-
-## Output
 It takes a few minutes the fetch available data (about two years). After this time you will have:
 * Statistics
     * pvpc_energy:consumption (PVPC: Consumo): Hourly electricity consumption

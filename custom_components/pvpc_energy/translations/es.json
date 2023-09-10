@@ -1,0 +1,19 @@
+{
+    "config": {
+      "step": {
+        "user": {
+            "title": "UFD",
+            "description": "Introduce las credenciales de UFD",
+            "data": {
+                "ufd_login": "UFD login",
+                "ufd_password": "UFD password",
+                "cups": "CUPS",
+                "power_high": "Potencia alta",
+                "power_low": "Potencia baja",
+                "zip_code": "Código postal",
+                "bills_number": "Número de facturas para la tarjeta Markdown"
+            }
+        }
+      }
+    }
+  }
