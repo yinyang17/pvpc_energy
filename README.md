@@ -8,7 +8,7 @@ Imports electric consumption and cost from ufd.es and ree.es. Calculate current 
 ## Instalation and configuration
 You need to be registered on https://www.ufd.es.
 After restart add integration indicating UFD credentials and number of bills to show in the Markdown Card.
-Consumptions and billing data are stored in "user_files" directory. Add them to this directory if you have data from previous installations.
+Energy (energy_data.csv) and billing (billing_periods.csv) data are stored in "user_files" directory. Create de directory and add them to this directory if you have data from previous installations.
 
 ## Output
 After add the integration it gets available data from:

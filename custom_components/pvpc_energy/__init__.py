@@ -10,6 +10,7 @@ import logging
 _LOGGER = logging.getLogger(__name__)
 
 async def async_setup_entry(hass, entry) -> bool:
+    _LOGGER.debug(f"pvpc_energy: async_setup_entry, entry_id={entry.entry_id}, hass_data={dict(entry.data)}")
     hass_data = dict(entry.data)
     PvpcCoordinator.set_config(hass_data)
 
@@ -18,8 +19,6 @@ async def async_setup_entry(hass, entry) -> bool:
     hass.data[DOMAIN][entry.entry_id] = hass_data
 
     await hass.async_add_executor_job(setup_hass_services, hass)
-        
-    _LOGGER.debug(f"pvpc_energy: async_setup_entry, entry_id={entry.entry_id}, hass_data={hass_data}")
     return True
 
 def setup_hass_services(hass) -> None:
@@ -41,9 +40,9 @@ async def async_unload_entry(hass, entry) -> bool:
     return True
 
 def setup(hass, config):
+    _LOGGER.debug(f"pvpc_energy: setup")
     if not exists(USER_FILES_PATH):
         makedirs(USER_FILES_PATH)
     hass.data.setdefault(DOMAIN, {})
 
-    _LOGGER.debug(f"pvpc_energy: setup")
     return True

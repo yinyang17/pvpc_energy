@@ -35,7 +35,7 @@ class PvpcCoordinator:
         UFD.User = config['ufd_login']
         UFD.Password = config['ufd_password']
         UFD.cups = config['cups']        
-        _LOGGER.debug(f"END - set_config(config={config})")
+        _LOGGER.debug(f"END - set_config")
 
     async def import_energy_data(hass):
         _LOGGER.debug(f"START - import_energy_data()")
