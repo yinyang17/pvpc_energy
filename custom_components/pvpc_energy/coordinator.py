@@ -2,9 +2,9 @@ from .const import DOMAIN, CURRENT_BILL_STATE, CONSUMPTION_STATISTIC_ID, CONSUMP
 from homeassistant.components.recorder import get_instance
 from homeassistant.components.recorder.models import StatisticData, StatisticMetaData
 from homeassistant.components.recorder.statistics import (async_add_external_statistics, get_last_statistics, statistics_during_period, )
-from .api.ufd import UFD
-from .api.ree import REE
-from .api.cnmc import CNMC
+from .ufd import UFD
+from .ree import REE
+from .cnmc import CNMC
 import datetime
 import time
 from os.path import exists
@@ -60,8 +60,8 @@ class PvpcCoordinator:
             total_consumptions, total_prices = PvpcCoordinator.load_energy_data(ENERGY_FILE)
             consumptions_len = len(total_consumptions)
             prices_len = len(total_prices)
-            consumptions = await UFD.consumptions(start_date, end_date, total_consumptions, hass)
-            prices = await REE.pvpc(start_date, end_date, total_prices, hass)
+            consumptions = await PvpcCoordinator.get_data(UFD.consumptions, start_date, end_date, total_consumptions, 14, hass)
+            prices = await PvpcCoordinator.get_data(REE.pvpc, start_date, end_date, total_prices, 28, hass)
             if len(total_consumptions) > consumptions_len or len(total_prices) > prices_len:
                 PvpcCoordinator.save_energy_data(ENERGY_FILE, total_consumptions, total_prices)
 
@@ -96,6 +96,34 @@ class PvpcCoordinator:
             await PvpcCoordinator.calculate_bills(total_consumptions, hass)
 
         _LOGGER.debug(f"END - import_energy_data")
+
+    async def get_data(getter, start_date, end_date, total_data, days, hass):
+        _LOGGER.debug(f"START - get_data(getter={getter}, start_date={start_date.isoformat()}, end_date={end_date.isoformat()}, len(total_data)={len(total_data)}, days={days})")    
+        result = {}
+        timestamps = total_data.keys()
+        if start_date == None: start_date = datetime.date.min
+
+        start_timestamp = 0 if start_date == datetime.date.min else int(time.mktime(start_date.timetuple()))
+        end_timestamp = int(time.mktime(datetime.datetime(end_date.year, end_date.month, end_date.day, 23).timetuple()))
+        for timestamp, value in total_data.items():
+            if start_timestamp <= timestamp <= end_timestamp:
+                result[timestamp] = value
+
+        request_end_date = end_date + datetime.timedelta(days=1)
+        while request_end_date > start_date:
+            request_start_date = request_end_date - datetime.timedelta(days=1)
+            while int(time.mktime(request_start_date.timetuple())) in timestamps and request_start_date >= start_date:
+                request_start_date -= datetime.timedelta(days=1)
+            if request_start_date < start_date: break
+            request_end_date = request_start_date - datetime.timedelta(days=1)
+            while int(time.mktime(request_end_date.timetuple())) not in timestamps and request_end_date >= start_date and (request_start_date - request_end_date).days < days:
+                request_end_date -= datetime.timedelta(days=1)
+            request_end_date += datetime.timedelta(days=1)
+            data = await getter(request_end_date, request_start_date, hass)
+            result |= data
+            total_data |= data
+        _LOGGER.debug(f"END - get_data: len(result)={len(result)}")
+        return result
 
     async def calculate_bills(consumptions, hass):
         _LOGGER.debug(f"START - calculate_bills(len(consumptions)={len(consumptions)})")

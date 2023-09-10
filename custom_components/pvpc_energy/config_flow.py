@@ -4,7 +4,7 @@ import homeassistant.helpers.config_validation as cv
 import voluptuous as vol
 import logging
 from .const import DOMAIN
-from .api.ufd import UFD
+from .ufd import UFD
 
 _LOGGER = logging.getLogger(__name__)
 
