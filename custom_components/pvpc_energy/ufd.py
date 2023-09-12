@@ -57,7 +57,6 @@ class UFD:
         if UFD.token == '':
             payload = {'user': UFD.User, 'password': UFD.Password}
             r = await hass.async_add_executor_job(post, UFD.login_url, headers, payload)
-            _LOGGER.debug(f"status_code: {r.status_code}, response: {r.text}")
             response = None
             if r.status_code == 200:    
                 response = r.json()
