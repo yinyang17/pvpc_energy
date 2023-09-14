@@ -37,6 +37,35 @@ class PvpcCoordinator:
         UFD.cups = config['cups']        
         _LOGGER.debug(f"END - set_config")
 
+    async def reprocess_statistics(hass):
+        _LOGGER.debug(f"START - reprocess_statistics()")
+        total_consumptions, total_prices = PvpcCoordinator.load_energy_data(ENERGY_FILE)
+
+        _LOGGER.info(f"len(total_consumptions)={len(total_consumptions)}")
+        if len(total_consumptions) > 0:
+            consumption_statistics, cost_statistics = PvpcCoordinator.create_statistics(total_consumptions, total_prices, 0, 0)
+    
+            consumption_metadata = StatisticMetaData(
+                name=CONSUMPTION_STATISTIC_NAME,
+                has_mean=False,
+                has_sum=True,
+                source=DOMAIN,
+                statistic_id=CONSUMPTION_STATISTIC_ID,
+                unit_of_measurement='kWh'
+            )
+            cost_metadata = StatisticMetaData(
+                name=COST_STATISTIC_NAME,
+                has_mean=False,
+                has_sum=True,
+                source=DOMAIN,
+                statistic_id=COST_STATISTIC_ID,
+                unit_of_measurement='EUR',
+            )
+            _LOGGER.info(f"len(consumption_statistics)={len(consumption_statistics)}, len(cost_statistics)={len(cost_statistics)}")
+            await get_instance(hass).async_add_executor_job(async_add_external_statistics, hass, consumption_metadata, consumption_statistics)
+            await get_instance(hass).async_add_executor_job(async_add_external_statistics, hass, cost_metadata, cost_statistics)
+        _LOGGER.debug(f"END - reprocess_statistics()")
+
     async def import_energy_data(hass):
         _LOGGER.debug(f"START - import_energy_data()")
         start_date = datetime.date.min
