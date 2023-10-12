@@ -68,7 +68,7 @@ class UFD:
             headers['Authorization'] = f"Bearer {UFD.token}"
         return headers
     
-    async def consumptions(start_date, end_date, hass):
+    async def consumptions(start_date, end_date):
         _LOGGER.debug(f"START - UFD.consumptions(start_date={start_date.isoformat()}, end_date={end_date.isoformat()})")
     
         result = {}

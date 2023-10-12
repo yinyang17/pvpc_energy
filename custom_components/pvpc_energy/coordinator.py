@@ -132,7 +132,7 @@ class PvpcCoordinator:
 
         _LOGGER.debug(f"END - import_energy_data")
 
-    async def get_data(getter, start_date, end_date, total_data, days, hass):
+    async def get_data(getter, start_date, end_date, total_data, days):
         _LOGGER.debug(f"START - get_data(getter={getter}, start_date={start_date.isoformat()}, end_date={end_date.isoformat()}, len(total_data)={len(total_data)}, days={days})")    
         result = {}
         timestamps = total_data.keys()
@@ -154,7 +154,7 @@ class PvpcCoordinator:
             while int(time.mktime(request_end_date.timetuple())) not in timestamps and request_end_date >= start_date and (request_start_date - request_end_date).days < days:
                 request_end_date -= datetime.timedelta(days=1)
             request_end_date += datetime.timedelta(days=1)
-            data = await getter(request_end_date, request_start_date, hass)
+            data = await getter(request_end_date, request_start_date)
             result |= data
             total_data |= data
         _LOGGER.debug(f"END - get_data: len(result)={len(result)}")
