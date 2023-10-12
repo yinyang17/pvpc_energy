@@ -1,17 +1,11 @@
 import datetime
 import time
-import requests
+import aiohttp
 import random
 import logging
 
+
 _LOGGER = logging.getLogger(__name__)
-
-
-def post(url, headers, payload):
-    return requests.post(url, headers=headers, json=payload)
-
-def get(url, headers):
-    return requests.get(url, headers=headers)
 
 class UFD:
     Appclientid = "1f3n1frmnqn14arndr3507lnok"
@@ -43,7 +37,7 @@ class UFD:
         UFD.sequence += 1
         return f"{UFD.userId}/{UFD.rand}/{UFD.sequence}"
 
-    async def getHeaders(hass):
+    async def getHeaders(session):
         headers = {
             'X-Application': UFD.Application,
             'X-Appclientid': UFD.Appclientid,
@@ -56,19 +50,20 @@ class UFD:
         }
         if UFD.token == '':
             payload = {'user': UFD.User, 'password': UFD.Password}
-            r = await hass.async_add_executor_job(post, UFD.login_url, headers, payload)
-            response = None
-            if r.status_code == 200:    
-                response = r.json()
-            else:
-                _LOGGER.error(f"status_code: {r.status_code}, response: {r.text}")
-            if response is not None:
-                UFD.userId = response['user']['userId']
-                UFD.token = response['accessToken']
-                UFD.nif = response['user']['documentNumber']
-                headers['Authorization'] = f"Bearer {UFD.token}"
-                headers['X-MessageId'] = UFD.getMessageId()
-                _LOGGER.info(f"UFD.getHeaders: headers={headers}")
+            async with session.post(UFD.login_url, headers=headers, json=payload, ssl=False) as resp:
+                response = None
+                if resp.status == 200:
+                    response = await resp.json()
+                else:
+                    text = await resp.text()
+                    _LOGGER.error(f"status_code: {resp.status}, response: {text}")
+                if response is not None:
+                    UFD.userId = response['user']['userId']
+                    UFD.token = response['accessToken']
+                    UFD.nif = response['user']['documentNumber']
+                    headers['Authorization'] = f"Bearer {UFD.token}"
+                    headers['X-MessageId'] = UFD.getMessageId()
+                    _LOGGER.info(f"UFD.getHeaders: headers={headers}")
         else:
             headers['Authorization'] = f"Bearer {UFD.token}"
         return headers
@@ -77,56 +72,65 @@ class UFD:
         _LOGGER.debug(f"START - UFD.consumptions(start_date={start_date.isoformat()}, end_date={end_date.isoformat()})")
     
         result = {}
-        headers = await UFD.getHeaders(hass)
-        url = UFD.consumptions_url.format(nif=UFD.nif, cups=UFD.cups, start_date=start_date.strftime('%d/%m/%Y'), end_date=end_date.strftime('%d/%m/%Y'))
-        response = None
-        _LOGGER.info(f"UFD.get_consumptions(start_date={start_date.isoformat()}, end_date={end_date.isoformat()})")
-        r = await hass.async_add_executor_job(get, url, headers)
-        if r.status_code == 401:
-            _LOGGER.debug(f"Unauthorized: {r.status_code}")
-            UFD.token = ''
-            headers = await UFD.getHeaders(hass)
-            r = await hass.async_add_executor_job(get, url, headers)
-        if r.status_code == 200:
-            response = r.json()
-        else:
-            _LOGGER.error(f"status_code: {r.status_code}, response: {r.text}")
-        if response is not None and 'items' in response:
-            for dayConsumption in response['items']:
-                timestamp = int(time.mktime(time.strptime(dayConsumption['periodStartDate'], '%d/%m/%Y')))
-                for hourConsumption in dayConsumption['consumptions']['items']:
-                    result[timestamp] = float(hourConsumption['consumptionValue'].replace(',','.'))
-                    timestamp += 3600
+        async with aiohttp.ClientSession() as session:
+            headers = await UFD.getHeaders(session)
+            url = UFD.consumptions_url.format(nif=UFD.nif, cups=UFD.cups, start_date=start_date.strftime('%d/%m/%Y'), end_date=end_date.strftime('%d/%m/%Y'))
+            response = None
+            _LOGGER.info(f"UFD.get_consumptions(start_date={start_date.isoformat()}, end_date={end_date.isoformat()})")
+            async with session.get(url, headers=headers, ssl=False) as resp:
+                if resp.status == 401:
+                    _LOGGER.debug(f"Unauthorized: {resp.status}")
+                    UFD.token = ''
+                    headers = await UFD.getHeaders(session)
+                    async with session.get(url, headers=headers, ssl=False) as resp:
+                        if resp.status == 200:
+                            response = await resp.json()    
+                        else:
+                            text = await resp.text()
+                            _LOGGER.error(f"status_code: {resp.status}, response: {text}")
+                elif resp.status == 200:
+                    response = await resp.json()    
+                else:
+                    text = await resp.text()
+                    _LOGGER.error(f"status_code: {resp.status}, response: {text}")
+            if response is not None and 'items' in response:
+                for dayConsumption in response['items']:
+                    timestamp = int(time.mktime(time.strptime(dayConsumption['periodStartDate'], '%d/%m/%Y')))
+                    for hourConsumption in dayConsumption['consumptions']['items']:
+                        result[timestamp] = float(hourConsumption['consumptionValue'].replace(',','.'))
+                        timestamp += 3600
         _LOGGER.debug(f"END - UFD.consumptions: len(result)={len(result)}")
         return result
     
-    async def billingPeriods(start_date, end_date, hass):
+    async def billingPeriods(start_date, end_date):
         _LOGGER.debug(f"START - UFD.billingPeriods(start_date={start_date.isoformat()}, end_date={end_date.isoformat()})")
         result = []
-        url = UFD.billingPeriods_url.format(cups=UFD.cups, start_date=start_date.strftime('%d/%m/%Y'), end_date=end_date.strftime('%d/%m/%Y'))
-        headers = await UFD.getHeaders(hass)
-        r = await hass.async_add_executor_job(get, url, headers)
-        if r.status_code == 200:
-            response = r.json()
-            for billing_period in response['billingPeriods']['items']:
-                period_start_date = datetime.date.fromisoformat(billing_period['periodStartDate'])
-                period_end_date = datetime.date.fromisoformat(billing_period['periodEndDate'])
-                result.append({'start_date': period_start_date, 'end_date': period_end_date})
+        async with aiohttp.ClientSession() as session:
+            url = UFD.billingPeriods_url.format(cups=UFD.cups, start_date=start_date.strftime('%d/%m/%Y'), end_date=end_date.strftime('%d/%m/%Y'))
+            headers = await UFD.getHeaders(session)
+            async with session.get(url, headers=headers, ssl=False) as resp:
+                if resp.status == 200:
+                    response = await resp.json()
+                    for billing_period in response['billingPeriods']['items']:
+                        period_start_date = datetime.date.fromisoformat(billing_period['periodStartDate'])
+                        period_end_date = datetime.date.fromisoformat(billing_period['periodEndDate'])
+                        result.append({'start_date': period_start_date, 'end_date': period_end_date})
         _LOGGER.debug(f"END - UFD.billingPeriods: len(result)={len(result)}")
         return result
 
-    async def supplypoints(hass):
+    async def supplypoints():
         _LOGGER.debug(f"START - UFD.supplypoints()")
-        headers = await UFD.getHeaders(hass)
-        url = UFD.supplypoints_url.format(nif=UFD.nif)
-        r = await hass.async_add_executor_job(get, url, headers)
-        if r.status_code == 200:
-            response = r.json()
-            _LOGGER.debug(f"response={response}")
-            UFD.cups = response['supplyPoints']['items'][0]['cups']
-            UFD.power_high = float(response['supplyPoints']['items'][0]['power1'])
-            UFD.power_low = float(response['supplyPoints']['items'][0]['power2'])
-            UFD.zip_code = response['supplyPoints']['items'][0]['address']['zipCode']
-            _LOGGER.debug(f"cups={UFD.cups}, power_high={UFD.power_high}, power_low={UFD.power_low}")
+        async with aiohttp.ClientSession() as session:
+            headers = await UFD.getHeaders(session)
+            url = UFD.supplypoints_url.format(nif=UFD.nif)
+            async with session.get(url, headers=headers, ssl=False) as resp:
+                if resp.status == 200:
+                    response = await resp.json()
+                    _LOGGER.debug(f"response={response}")
+                    UFD.cups = response['supplyPoints']['items'][0]['cups']
+                    UFD.power_high = float(response['supplyPoints']['items'][0]['power1'])
+                    UFD.power_low = float(response['supplyPoints']['items'][0]['power2'])
+                    UFD.zip_code = response['supplyPoints']['items'][0]['address']['zipCode']
+                    _LOGGER.debug(f"cups={UFD.cups}, power_high={UFD.power_high}, power_low={UFD.power_low}")
         _LOGGER.debug(f"END - UFD.supplypoints()")
     

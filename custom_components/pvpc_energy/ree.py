@@ -2,6 +2,7 @@ import time
 import aiohttp
 import logging
 
+
 _LOGGER = logging.getLogger(__name__)
 
 class REE:
@@ -17,7 +18,7 @@ class REE:
         }
         return headers
 
-    async def pvpc(start_date, end_date, hass):
+    async def pvpc(start_date, end_date):
         _LOGGER.debug(f"START - REE.pvpc(start_date={start_date.isoformat()}, end_date={end_date.isoformat()})")
         
         result = {}

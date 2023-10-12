@@ -25,7 +25,7 @@ class PvpcEnergyConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
             UFD.User = user_input['ufd_login']
             UFD.Password = user_input['ufd_password']
-            await UFD.supplypoints(self.hass)
+            await UFD.supplypoints()
             self.data = user_input
             self.data['cups'] = UFD.cups
             self.data['power_high'] = UFD.power_high

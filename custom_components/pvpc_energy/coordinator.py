@@ -95,8 +95,8 @@ class PvpcCoordinator:
             total_consumptions, total_prices = PvpcCoordinator.load_energy_data(ENERGY_FILE)
             consumptions_len = len(total_consumptions)
             prices_len = len(total_prices)
-            consumptions = await PvpcCoordinator.get_data(UFD.consumptions, start_date, end_date, total_consumptions, 14, hass)
-            prices = await PvpcCoordinator.get_data(REE.pvpc, start_date, end_date, total_prices, 28, hass)
+            consumptions = await PvpcCoordinator.get_data(UFD.consumptions, start_date, end_date, total_consumptions, 14)
+            prices = await PvpcCoordinator.get_data(REE.pvpc, start_date, end_date, total_prices, 28)
             if len(total_consumptions) > consumptions_len or len(total_prices) > prices_len:
                 PvpcCoordinator.save_energy_data(ENERGY_FILE, total_consumptions, total_prices)
 
@@ -171,7 +171,7 @@ class PvpcCoordinator:
                 periods_start_date = billing_periods[-1]['end_date']
             _LOGGER.info(f"periods_start_date={periods_start_date.isoformat()}, periods_end_date={periods_end_date.isoformat()}, (periods_end_date - periods_start_date).days={(periods_end_date - periods_start_date).days}")
             if (periods_end_date - periods_start_date).days > 25:
-                new_billing_periods = await UFD.billingPeriods(periods_start_date, periods_end_date, hass)
+                new_billing_periods = await UFD.billingPeriods(periods_start_date, periods_end_date)
                 if len(new_billing_periods) > 0:
                     billing_periods += new_billing_periods
                     PvpcCoordinator.save_billing_periods(BILLING_PERIODS_FILE, billing_periods)
@@ -232,7 +232,7 @@ class PvpcCoordinator:
 
         if end_timestamp - start_timestamp <= (3600 * 24): return {}
 
-        bill = await CNMC.calculate_bill(PvpcCoordinator.cups, bill_consumptions, PvpcCoordinator.power_high, PvpcCoordinator.power_low, PvpcCoordinator.zip_code, hass)
+        bill = await CNMC.calculate_bill(PvpcCoordinator.cups, bill_consumptions, PvpcCoordinator.power_high, PvpcCoordinator.power_low, PvpcCoordinator.zip_code)
         if 'graficoGastoTotalActual' in bill:
             billing_period['start_date'] = datetime.datetime.strptime(bill['graficaConsumoDiario']['consumosDiarios'][0]['fecha'], '%d/%m/%Y').date()
             billing_period['end_date'] = datetime.datetime.strptime(bill['graficaConsumoDiario']['consumosDiarios'][-1]['fecha'], '%d/%m/%Y').date()
