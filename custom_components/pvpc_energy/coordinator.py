@@ -37,6 +37,12 @@ class PvpcCoordinator:
         UFD.cups = config['cups']        
         _LOGGER.debug(f"END - set_config")
 
+    async def test(hass):
+        start_date = datetime.date.today() - datetime.timedelta(days=12)
+        end_date = datetime.date.today() - datetime.timedelta(days=2)
+        data = await REE.pvpc(start_date, end_date, hass)
+        _LOGGER.debug(f"test: {data}")
+
     async def reprocess_statistics(hass):
         _LOGGER.debug(f"START - reprocess_statistics()")
         total_consumptions, total_prices = PvpcCoordinator.load_energy_data(ENERGY_FILE)
