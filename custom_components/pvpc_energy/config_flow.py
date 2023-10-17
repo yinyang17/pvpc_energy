@@ -13,7 +13,7 @@ AUTH_SCHEMA = vol.Schema({
     vol.Required('ufd_password'): cv.string
 })
 CUPS_SCHEMA = vol.Schema({
-    vol.Required('bills_number'): cv.positive_int
+    vol.Required('bills_number', default='5'): cv.positive_int
 })
 
 class PvpcEnergyConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):

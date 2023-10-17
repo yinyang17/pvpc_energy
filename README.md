@@ -5,9 +5,10 @@ Imports electric consumption and cost from ufd.es and ree.es. Calculate current 
 ![Daily consumption](https://github.com/yinyang17/pvpc_energy/raw/main/assets/energy-daily.png)![Monthly consumption](https://github.com/yinyang17/pvpc_energy/raw/main/assets/energy-monthly.png)
 ![Bills](https://github.com/yinyang17/pvpc_energy/raw/main/assets/bills.png)
 
-## Instalation and configuration
+## Installation and configuration
 You need to be registered on https://www.ufd.es.
 After restart add integration indicating UFD credentials and number of bills to show in the Markdown Card.
+![Config credentials](https://github.com/yinyang17/pvpc_energy/raw/main/assets/config-credentials.png)![Config bills](https://github.com/yinyang17/pvpc_energy/raw/main/assets/config-bills-number.png)
 Energy (energy_data.csv) and billing (billing_periods.csv) data are stored in "user_files" directory. Create the directory and add the files to it if you have data from previous installations.
 
 ## Output
