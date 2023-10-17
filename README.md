@@ -10,6 +10,7 @@ You need to be registered on https://www.ufd.es.
 After restart add integration indicating UFD credentials and number of bills to show in the Markdown Card.
 ![Config credentials](https://github.com/yinyang17/pvpc_energy/raw/main/assets/config-credentials.png)![Config bills](https://github.com/yinyang17/pvpc_energy/raw/main/assets/config-bills-number.png)
 Energy (energy_data.csv) and billing (billing_periods.csv) data are stored in "user_files" directory. Create the directory and add the files to it if you have data from previous installations.
+Save this files before you remove the integration if plan to install it again later.
 
 ## Output
 After add the integration it gets available data from:
