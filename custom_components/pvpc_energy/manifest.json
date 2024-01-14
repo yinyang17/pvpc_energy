@@ -1,6 +1,6 @@
 {
   "domain": "pvpc_energy",
-  "name": "PVPC Energy",
+  "name": "UFD Distribución Electricidad∫",
   "codeowners": ["@yinyang17"],
   "config_flow": true,
   "dependencies": ["recorder"],
