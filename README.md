@@ -1,38 +1,37 @@
 # pvpc_energy
 ![UFD logo](https://github.com/yinyang17/pvpc_energy/raw/main/assets/logo-ufd.png) ![ESIOS logo](https://github.com/yinyang17/pvpc_energy/raw/main/assets/logo-esios.png) ![CNMC logo](https://github.com/yinyang17/pvpc_energy/raw/main/assets/logo-cnmc.png)
-Imports electric consumption and cost from ufd.es and ree.es. Calculate current and past bills from cnmc.gob.es
+Importa en el panel de energía los consumos y costes de ufd.es y ree.es. Calcula la factura en curso y las anterioes de cnmc.gob.es
 
 ![Daily consumption](https://github.com/yinyang17/pvpc_energy/raw/main/assets/energy-daily.png)![Monthly consumption](https://github.com/yinyang17/pvpc_energy/raw/main/assets/energy-monthly.png)
 ![Bills](https://github.com/yinyang17/pvpc_energy/raw/main/assets/bills.png)
 
-## Installation and configuration
-You need to be registered on https://www.ufd.es.
-After restart add integration indicating UFD credentials and number of bills to show in the Markdown Card.
+## Imstalación y configuración
+Necesitas estar registrado en https://www.ufd.es.
+Después de reiniciar y añadir la integración, deberás indicar las credenciales de UFD y el número de facturas a mostrar en la Markdown Card.
 ![Config credentials](https://github.com/yinyang17/pvpc_energy/raw/main/assets/config-credentials.png)![Config bills](https://github.com/yinyang17/pvpc_energy/raw/main/assets/config-bills-number.png)
-Energy (energy_data.csv) and billing (billing_periods.csv) data are stored in "user_files" directory. Create the directory and add the files to it if you have data from previous installations.
-Save this files before you remove the integration if plan to install it again later.
+Los datos de energía y coste (energy_data.csv) y los de las facturas (billing_periods.csv) se almacenan en el directorio "user_files". Descárgalos antes de desinstalar la integración si la vas a reinstalar más adelante.
+En el caso de tener datos de instalaciones previas, crea el directorio y añade los ficheros en él antes de añadir la integración
 
-## Output
-After add the integration it gets available data from:
-* https://www.ufd.es: Electricity consumptions and billings periods
-* https://api.esios.ree.es: Hourly energy prices
-* https://comparador.cnmc.gob.es/facturaluz/inicio: PVPC bills simulation
+## Salida
+Después de añadir y configuración la integración, se descargará automáticamente los datos desde:
+* https://www.ufd.es: Consumos horarios de electricidad y periodos de facturación
+* https://api.esios.ree.es: Precios horarios de la electricidad
+* https://comparador.cnmc.gob.es/facturaluz/inicio: Simulaciones de las facturas
 
-It takes a few minutes the fetch available data (about two years). After this time you will have:
-* Statistics
-    * pvpc_energy:consumption (PVPC: Consumo): Hourly electricity consumption
-    * pvpc_energy:cost (PVPC: Coste): Hourly electricity costs
+Tardará unos cuantos minutos en obtener todos los datos disponibles (alrededor de unos 2 años). Después de esto tendrás:
+* Estadísticas
+    * pvpc_energy:consumption (PVPC: Consumo): Consumos horarios de electricidad
+    * pvpc_energy:cost (PVPC: Coste): Costes horarios de electricidad
 * States
-    * pvpc_energy.current_bill: Cost of the current bill. In the "detail" attribute it has a markdown with the last "bills_number" bills
+    * pvpc_energy.current_bill: Coste de la factura en curso. En el atributo "detail" se almacena un texto formateado con markdown con los datos de las últimas facturas para mostrar con Markdown Card.
 
-
-## Panels
-Add consumption to Electricity grid in Energy Dashboard:
-* sensor which measures grid consumption: "PVPC: Consumo"
-* Use an entity tracking the total costs: "PVPC: Coste"
+## Paneles
+Añade el consumo de la red al panel de energía:
+* Elige un sensor que mida el consumo de la red en GJ, kWh, MJ, MWh, Wh.: "PVPC: Consumo"
+* Usar una entidad que realiza un seguimiento de los costes totales: "PVPC: Coste"
 ![Grid consumption configuration](https://github.com/yinyang17/pvpc_energy/raw/main/assets/grid-consumption-configuration.png)
 
-Add to Lovelace a Markdown card to show the last bills indicating in content:
+Añade a Lovelace un Markdown card para mostrar los datos de las últimas facturas:
 ```yml
 {{ state_attr('pvpc_energy.current_bill', 'detail')}}
 ```

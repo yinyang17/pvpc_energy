@@ -107,14 +107,17 @@ class UFD:
         result = []
         async with aiohttp.ClientSession() as session:
             url = UFD.billingPeriods_url.format(cups=UFD.cups, start_date=start_date.strftime('%d/%m/%Y'), end_date=end_date.strftime('%d/%m/%Y'))
-            headers = await UFD.getHeaders(session)
-            async with session.get(url, headers=headers, ssl=False) as resp:
-                if resp.status == 200:
-                    response = await resp.json()
-                    for billing_period in response['billingPeriods']['items']:
-                        period_start_date = datetime.date.fromisoformat(billing_period['periodStartDate'])
-                        period_end_date = datetime.date.fromisoformat(billing_period['periodEndDate'])
-                        result.append({'start_date': period_start_date, 'end_date': period_end_date})
+            try:
+                headers = await UFD.getHeaders(session)
+                async with session.get(url, headers=headers, ssl=False) as resp:
+                    if resp.status == 200:
+                        response = await resp.json()
+                        for billing_period in response['billingPeriods']['items']:
+                            period_start_date = datetime.date.fromisoformat(billing_period['periodStartDate'])
+                            period_end_date = datetime.date.fromisoformat(billing_period['periodEndDate'])
+                            result.append({'start_date': period_start_date, 'end_date': period_end_date})
+            except:
+                pass
         _LOGGER.debug(f"END - UFD.billingPeriods: len(result)={len(result)}")
         return result
 

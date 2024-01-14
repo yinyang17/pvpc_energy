@@ -179,26 +179,27 @@ class PvpcCoordinator:
             update = False
             for billing_period in reversed(billing_periods):
                 if 'total_consumption' not in billing_period:
-                    billing_period = await PvpcCoordinator.get_bill(billing_period, consumptions, hass)
+                    billing_period = await PvpcCoordinator.get_bill(billing_period, consumptions)
                     if 'total_consumption' in billing_period:
                         update = True
             if update:
                 PvpcCoordinator.save_billing_periods(BILLING_PERIODS_FILE, billing_periods)
 
             current_billing_period = {'start_date': billing_periods[-1]['end_date'] + datetime.timedelta(days=1), 'end_date':datetime.date.today()}
-            current_billing_period = await PvpcCoordinator.get_bill(current_billing_period, consumptions, hass)
+            current_billing_period = await PvpcCoordinator.get_bill(current_billing_period, consumptions)
 
             current_bill_value = ''
             bills_description = ''
             if 'total_cost' in current_billing_period:
                 billing_periods.append(current_billing_period)
-
-                days = (current_billing_period['end_date'] - current_billing_period['start_date']).days + 1
-                estimation_days = 30
-                estimation_end_date = current_billing_period['start_date'] + datetime.timedelta(days=estimation_days)
-                cost = round(current_billing_period['total_cost'] / days * estimation_days, 2)
                 current_bill_value = '%.2f' % current_billing_period['total_cost']
-                bills_description += f"Estimación {current_billing_period['start_date'].strftime('%d/%m')} - {estimation_end_date.strftime('%d/%m')} ({estimation_days} días): **{cost} €**\n\n"
+                days = (current_billing_period['end_date'] - current_billing_period['start_date']).days + 1
+
+                estimation_days = 30
+                if estimation_days > days:
+                    estimation_end_date = current_billing_period['start_date'] + datetime.timedelta(days=estimation_days-1)
+                    cost = round(current_billing_period['total_cost'] / days * estimation_days, 2)
+                    bills_description += f"Estimación {current_billing_period['start_date'].strftime('%d/%m')} - {estimation_end_date.strftime('%d/%m')} ({estimation_days} días): **{cost} €**\n\n"
                 
             bills_description += '| Fecha | Días | Importe | kWh | cent/kWh | €/día | kWh/día |\n'
             bills_description += '| :---: | :---: | :---: | :---: | :---: | :---: | :---: |'
@@ -219,7 +220,7 @@ class PvpcCoordinator:
             hass.states.async_set(CURRENT_BILL_STATE, current_bill_value, {'detail': bills_description})
         _LOGGER.debug(f"END - calculate_bills")
 
-    async def get_bill(billing_period, consumptions, hass):
+    async def get_bill(billing_period, consumptions):
         _LOGGER.debug(f"START - get_bill(billing_period={billing_period}, len(consumptions)={len(consumptions)})")
         start_timestamp = int(time.mktime(billing_period['start_date'].timetuple()))
         end_timestamp = int(time.mktime((billing_period['end_date'] + datetime.timedelta(days=1)).timetuple())) - 3600
