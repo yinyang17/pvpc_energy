@@ -3,7 +3,7 @@
     "step": {
       "user": {
         "title": "UFD",
-        "description": "Inserir os dados do UFD",
+        "description": "Inserir os dados do UFD. Você precisa ter o login em duas etapas desativado",
         "data": {
           "ufd_login": "Utilizado UFD",
           "ufd_password": "Senha UFD"

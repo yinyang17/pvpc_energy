@@ -6,7 +6,7 @@ Importa en el panel de energía los consumos y costes de ufd.es y ree.es. Calcul
 ![Bills](https://github.com/yinyang17/pvpc_energy/raw/main/assets/bills.png)
 
 ## Imstalación y configuración
-Necesitas estar registrado en https://www.ufd.es.
+Necesitas estar registrado en https://www.ufd.es y tener desactivado el inicio de sesión en dos pasos.
 Después de reiniciar y añadir la integración, deberás indicar las credenciales de UFD y el número de facturas a mostrar en la Markdown Card.
 ![Config credentials](https://github.com/yinyang17/pvpc_energy/raw/main/assets/config-credentials.png)![Config bills](https://github.com/yinyang17/pvpc_energy/raw/main/assets/config-bills-number.png)
 Los datos de energía y coste (energy_data.csv) y los de las facturas (billing_periods.csv) se almacenan en el directorio "user_files". Descárgalos antes de desinstalar la integración si la vas a reinstalar más adelante.
@@ -22,8 +22,10 @@ Tardará unos cuantos minutos en obtener todos los datos disponibles (alrededor 
 * Estadísticas
     * pvpc_energy:consumption (PVPC: Consumo): Consumos horarios de electricidad
     * pvpc_energy:cost (PVPC: Coste): Costes horarios de electricidad
-* States
+* Estados
     * pvpc_energy.current_bill: Coste de la factura en curso. En el atributo "detail" se almacena un texto formateado con markdown con los datos de las últimas facturas para mostrar con Markdown Card.
+
+Tras la descarga inicial se realiza una actualización diaria a las 7:05 para descargar los nuevos datos. Los datos de consumo en UFD suelen tener un par de días de retraso.
 
 ## Paneles
 Añade el consumo de la red al panel de energía:
@@ -36,3 +38,7 @@ Añade a Lovelace un Markdown card para mostrar los datos de las últimas factur
 {{ state_attr('pvpc_energy.current_bill', 'detail')}}
 ```
 ![Markdown card configuration](https://github.com/yinyang17/pvpc_energy/raw/main/assets/markdown-card-config.png)
+
+## Servicios
+* import_energy_data: Se ejecuta diariamente a las 7:05 para actualizar los datos de consumo, coste y facturas
+* reprocess_statistics: Recrea las estadísticas a partir de los datos de consumo. Utilizar en caso de que se muestre algún dato incorrecto (consumos negativos, ...)

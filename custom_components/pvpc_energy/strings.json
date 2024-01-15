@@ -3,7 +3,7 @@
       "step": {
         "user": {
             "title": "UFD",
-            "description": "Enter de UFD credentials and data",
+            "description": "Enter de UFD credentials and data. You need to have two-step login disabled",
             "data": {
                 "ufd_login": "UFD login",
                 "ufd_password": "UFD password",
