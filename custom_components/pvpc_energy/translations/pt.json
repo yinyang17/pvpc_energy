@@ -1,0 +1,21 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "UFD",
+        "description": "Inserir os dados do UFD",
+        "data": {
+          "ufd_login": "Utilizado UFD",
+          "ufd_password": "Senha UFD"
+        }
+      },
+      "cups": {
+        "title": "UFD",
+        "description": "Inserir o número de contas para mostar",
+        "data": {
+          "bills_number": "Número de Contas"
+        }
+      }
+    }
+  }
+}
