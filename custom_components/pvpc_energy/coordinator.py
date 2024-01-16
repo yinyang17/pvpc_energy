@@ -179,9 +179,9 @@ class PvpcCoordinator:
 
             update = False
             for billing_period in reversed(billing_periods):
-                if 'total_consumption' not in billing_period:
+                if 'total_cost' not in billing_period:
                     billing_period = await PvpcCoordinator.get_bill(billing_period, consumptions)
-                    if 'total_consumption' in billing_period:
+                    if 'total_cost' in billing_period:
                         update = True
             if update:
                 PvpcCoordinator.save_billing_periods(BILLING_PERIODS_FILE, billing_periods)
@@ -207,11 +207,15 @@ class PvpcCoordinator:
             for billing_period in reversed(billing_periods[-PvpcCoordinator.bills_number:]):
                 date = billing_period['end_date'].strftime('%d/%m')
                 days = (billing_period['end_date'] - billing_period['start_date']).days + 1
-                cost = round(billing_period['total_cost'], 2)
                 consumption = round(billing_period['total_consumption'], 0)
-                cost_kwh = round(billing_period['energy_cost'] / billing_period['total_consumption'] * 100, 1)
-                day_cost = round(billing_period['total_cost'] / days, 2)
                 day_consumption = round(billing_period['total_consumption'] / days, 1)
+                cost = ''
+                cost_kwh = ''
+                day_cost = ''
+                if 'total_cost' in billing_period:
+                    cost = round(billing_period['total_cost'], 2)
+                    cost_kwh = round(billing_period['energy_cost'] / billing_period['total_consumption'] * 100, 1)
+                    day_cost = round(billing_period['total_cost'] / days, 2)
                 if billing_period == current_billing_period:
                     bills_description += f"\n|\n| {date} | {days} | {cost} | {consumption} | **{cost_kwh}** | {day_cost} | {day_consumption} |\n|"
                 else:
