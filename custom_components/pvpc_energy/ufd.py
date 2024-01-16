@@ -69,12 +69,19 @@ class UFD:
         return headers
     
     async def consumptions(start_date, end_date):
+        # Hay un error en la web de UFD. Al solicitar los consumos desplaza el rango un día hacia atrás
+        # y del primer día (que no se solicita) devuelve solo el consumo de las 24:00.
+        # Solución: Sumamos un día a end_date y descartamos los días que no tengan 24 consumos y
+        # no estén en el periodo solicitado, para que también funcione correctamente cuando se solucione la web.
+
         _LOGGER.debug(f"START - UFD.consumptions(start_date={start_date.isoformat()}, end_date={end_date.isoformat()})")
-    
+
         result = {}
         async with aiohttp.ClientSession() as session:
             headers = await UFD.getHeaders(session)
-            url = UFD.consumptions_url.format(nif=UFD.nif, cups=UFD.cups, start_date=start_date.strftime('%d/%m/%Y'), end_date=end_date.strftime('%d/%m/%Y'))
+           # Fix UFD: Sumamos un día a end_date 
+            url = UFD.consumptions_url.format(nif=UFD.nif, cups=UFD.cups, start_date=start_date.strftime('%d/%m/%Y'),
+                                              end_date=(end_date + datetime.timedelta(days=1)).strftime('%d/%m/%Y'))
             response = None
             _LOGGER.info(f"UFD.get_consumptions(start_date={start_date.isoformat()}, end_date={end_date.isoformat()})")
             async with session.get(url, headers=headers, ssl=False) as resp:
@@ -95,10 +102,12 @@ class UFD:
                     _LOGGER.error(f"status_code: {resp.status}, response: {text}")
             if response is not None and 'items' in response:
                 for dayConsumption in response['items']:
-                    timestamp = int(time.mktime(time.strptime(dayConsumption['periodStartDate'], '%d/%m/%Y')))
-                    for hourConsumption in dayConsumption['consumptions']['items']:
-                        result[timestamp] = float(hourConsumption['consumptionValue'].replace(',','.'))
-                        timestamp += 3600
+                    if len(dayConsumption['consumptions']['items']) == 24:
+                        if start_date <= datetime.datetime.strptime(dayConsumption['periodStartDate'], '%d/%m/%Y').date() <= end_date:
+                            timestamp = int(time.mktime(time.strptime(dayConsumption['periodStartDate'], '%d/%m/%Y')))
+                            for hourConsumption in dayConsumption['consumptions']['items']:
+                                result[timestamp] = float(hourConsumption['consumptionValue'].replace(',','.'))
+                                timestamp += 3600
         _LOGGER.debug(f"END - UFD.consumptions: len(result)={len(result)}")
         return result
     

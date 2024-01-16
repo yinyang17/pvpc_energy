@@ -155,6 +155,7 @@ class PvpcCoordinator:
                 request_end_date -= datetime.timedelta(days=1)
             request_end_date += datetime.timedelta(days=1)
             data = await getter(request_end_date, request_start_date)
+            if len(data) == 0: break
             result |= data
             total_data |= data
         _LOGGER.debug(f"END - get_data: len(result)={len(result)}")
