@@ -102,6 +102,10 @@ class PvpcCoordinator:
 
             _LOGGER.info(f"len(consumptions)={len(consumptions)}")
             if len(consumptions) > 0:
+                if consumptions == total_consumptions:
+                    prices = total_prices
+                    total_energy_consumption = 0
+                    total_energy_cost = 0
                 start_date = max(start_date, datetime.datetime.fromtimestamp(min(list(consumptions.keys()))).date())
                 consumption_statistics, cost_statistics = PvpcCoordinator.create_statistics(consumptions, prices, total_energy_consumption, total_energy_cost)
         
@@ -158,6 +162,25 @@ class PvpcCoordinator:
             if len(data) == 0: break
             result |= data
             total_data |= data
+        
+        # Fill gaps if exist
+        request_end_date = start_date
+        first_date = datetime.datetime.fromtimestamp(min(list(total_data.keys()))).date()
+        while request_end_date > first_date:
+            request_start_date = request_end_date - datetime.timedelta(days=1)
+            while int(time.mktime(request_start_date.timetuple())) in timestamps and request_start_date >= first_date:
+                request_start_date -= datetime.timedelta(days=1)
+            if request_start_date < first_date: break
+            request_end_date = request_start_date - datetime.timedelta(days=1)
+            while int(time.mktime(request_end_date.timetuple())) not in timestamps and request_end_date >= first_date and (request_start_date - request_end_date).days < days:
+                request_end_date -= datetime.timedelta(days=1)
+            request_end_date += datetime.timedelta(days=1)
+            data = await getter(request_end_date, request_start_date)
+            if len(data) > 0:
+                _LOGGER.info(f"gaps_filled: ({request_end_date.isoformat()} - {request_start_date.isoformat()})")
+                total_data |= data
+                result = total_data
+
         _LOGGER.debug(f"END - get_data: len(result)={len(result)}")
         return result
 
@@ -191,7 +214,7 @@ class PvpcCoordinator:
 
             current_bill_value = ''
             bills_description = ''
-            if 'total_cost' in current_billing_period:
+            if 'total_cost' in current_billing_period and current_billing_period['total_cost'] != '-':
                 billing_periods.append(current_billing_period)
                 current_bill_value = '%.2f' % current_billing_period['total_cost']
                 days = (current_billing_period['end_date'] - current_billing_period['start_date']).days + 1
@@ -212,7 +235,7 @@ class PvpcCoordinator:
                 cost = ''
                 cost_kwh = ''
                 day_cost = ''
-                if 'total_cost' in billing_period:
+                if 'total_cost' in billing_period and billing_period['total_cost'] != '-':
                     cost = round(billing_period['total_cost'], 2)
                     cost_kwh = round(billing_period['energy_cost'] / billing_period['total_consumption'] * 100, 1)
                     day_cost = round(billing_period['total_cost'] / days, 2)
@@ -229,26 +252,11 @@ class PvpcCoordinator:
         _LOGGER.debug(f"START - get_bill(billing_period={billing_period}, len(consumptions)={len(consumptions)})")
         start_timestamp = int(time.mktime(billing_period['start_date'].timetuple()))
         end_timestamp = int(time.mktime((billing_period['end_date'] + datetime.timedelta(days=1)).timetuple())) - 3600
-        total_consumption = 0.0
         bill_consumptions = {}
         for timestamp, consumption in consumptions.items():
             if start_timestamp <= timestamp <= end_timestamp:
                 bill_consumptions[timestamp] = consumption
-                total_consumption += consumption
-
-        if end_timestamp - start_timestamp <= (3600 * 24): return {}
-
-        bill = await CNMC.calculate_bill(PvpcCoordinator.cups, bill_consumptions, PvpcCoordinator.power_high, PvpcCoordinator.power_low, PvpcCoordinator.zip_code)
-        if 'graficoGastoTotalActual' in bill:
-            billing_period['start_date'] = datetime.datetime.strptime(bill['graficaConsumoDiario']['consumosDiarios'][0]['fecha'], '%d/%m/%Y').date()
-            billing_period['end_date'] = datetime.datetime.strptime(bill['graficaConsumoDiario']['consumosDiarios'][-1]['fecha'], '%d/%m/%Y').date()
-            billing_period['total_cost'] = bill['graficoGastoTotalActual']['importeTotal']
-            billing_period['power_cost'] = bill['graficoGastoTotalActual']['importePotencia']
-            billing_period['energy_cost'] = bill['graficoGastoTotalActual']['importeEnergia']
-            billing_period['rent_cost'] = bill['graficoGastoTotalActual']['importeAlquiler']
-            billing_period['tax_cost'] = bill['graficoGastoTotalActual']['importeIVA']
-        billing_period['total_consumption'] = total_consumption
-
+        billing_period = await CNMC.calculate_bill(billing_period, PvpcCoordinator.cups, bill_consumptions, PvpcCoordinator.power_high, PvpcCoordinator.power_low, PvpcCoordinator.zip_code)
         _LOGGER.debug(f"END - get_bill: {billing_period}")
         return billing_period
 
@@ -291,7 +299,11 @@ class PvpcCoordinator:
                 for line in file:
                     start_date, end_date, total_cost, power_cost, energy_cost, rent_cost, tax_cost, total_consumption = line[0:-1].split(',')
                     billing_period = {'start_date': datetime.date.fromisoformat(start_date), 'end_date': datetime.date.fromisoformat(end_date)}
-                    if total_cost != '': billing_period['total_cost'] = float(total_cost)
+                    if total_cost != '':
+                        if total_cost == '-':
+                            billing_period['total_cost'] = total_cost
+                        else:
+                            billing_period['total_cost'] = float(total_cost)
                     if power_cost != '': billing_period['power_cost'] = float(power_cost)
                     if energy_cost != '': billing_period['energy_cost'] = float(energy_cost)
                     if rent_cost != '': billing_period['rent_cost'] = float(rent_cost)

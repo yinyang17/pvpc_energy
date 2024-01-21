@@ -102,7 +102,7 @@ class UFD:
                     _LOGGER.error(f"status_code: {resp.status}, response: {text}")
             if response is not None and 'items' in response:
                 for dayConsumption in response['items']:
-                    if len(dayConsumption['consumptions']['items']) == 24:
+                    if len(dayConsumption['consumptions']['items']) >= 23:
                         if start_date <= datetime.datetime.strptime(dayConsumption['periodStartDate'], '%d/%m/%Y').date() <= end_date:
                             timestamp = int(time.mktime(time.strptime(dayConsumption['periodStartDate'], '%d/%m/%Y')))
                             for hourConsumption in dayConsumption['consumptions']['items']:
