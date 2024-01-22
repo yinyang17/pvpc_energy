@@ -100,14 +100,25 @@ class UFD:
                 else:
                     text = await resp.text()
                     _LOGGER.error(f"status_code: {resp.status}, response: {text}")
-            if response is not None and 'items' in response:
-                for dayConsumption in response['items']:
-                    if len(dayConsumption['consumptions']['items']) >= 23:
-                        if start_date <= datetime.datetime.strptime(dayConsumption['periodStartDate'], '%d/%m/%Y').date() <= end_date:
-                            timestamp = int(time.mktime(time.strptime(dayConsumption['periodStartDate'], '%d/%m/%Y')))
-                            for hourConsumption in dayConsumption['consumptions']['items']:
-                                result[timestamp] = float(hourConsumption['consumptionValue'].replace(',','.'))
-                                timestamp += 3600
+            if response is not None:
+                if 'items' in response:
+                    for dayConsumption in response['items']:
+                        if len(dayConsumption['consumptions']['items']) >= 23:
+                            if start_date <= datetime.datetime.strptime(dayConsumption['periodStartDate'], '%d/%m/%Y').date() <= end_date:
+                                timestamp = int(time.mktime(time.strptime(dayConsumption['periodStartDate'], '%d/%m/%Y')))
+                                for hourConsumption in dayConsumption['consumptions']['items']:
+                                    result[timestamp] = float(hourConsumption['consumptionValue'].replace(',','.'))
+                                    timestamp += 3600
+                
+                date = start_date
+                while date <= end_date:
+                    timestamp = int(time.mktime((date + datetime.timedelta(days=1)).timetuple())) - 3600
+                    if timestamp in result: break
+                    elif date == end_date or (timestamp + 3600) in result:
+                        result[timestamp] = '-'
+                        break
+                    date += datetime.timedelta(days=1)
+
         _LOGGER.debug(f"END - UFD.consumptions: len(result)={len(result)}")
         return result
     

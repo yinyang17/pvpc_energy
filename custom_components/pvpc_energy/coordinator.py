@@ -140,45 +140,34 @@ class PvpcCoordinator:
         _LOGGER.debug(f"START - get_data(getter={getter}, start_date={start_date.isoformat()}, end_date={end_date.isoformat()}, len(total_data)={len(total_data)}, days={days})")    
         result = {}
         timestamps = total_data.keys()
-        if start_date == None: start_date = datetime.date.min
+        
+        start = datetime.date.min
+        if len(total_data) > 0:
+            min_timestamp = min(list(timestamps))
+            if total_data[min_timestamp] == '-':
+                start = datetime.datetime.fromtimestamp(min_timestamp).date() + datetime.timedelta(days=1)
 
-        start_timestamp = 0 if start_date == datetime.date.min else int(time.mktime(start_date.timetuple()))
+        start_timestamp = 0 if start == datetime.date.min else int(time.mktime(start.timetuple()))
         end_timestamp = int(time.mktime(datetime.datetime(end_date.year, end_date.month, end_date.day, 23).timetuple()))
         for timestamp, value in total_data.items():
             if start_timestamp <= timestamp <= end_timestamp:
                 result[timestamp] = value
 
         request_end_date = end_date + datetime.timedelta(days=1)
-        while request_end_date > start_date:
+        while request_end_date > start:
             request_start_date = request_end_date - datetime.timedelta(days=1)
-            while int(time.mktime(request_start_date.timetuple())) in timestamps and request_start_date >= start_date:
+            while int(time.mktime(request_start_date.timetuple())) in timestamps and request_start_date >= start:
                 request_start_date -= datetime.timedelta(days=1)
-            if request_start_date < start_date: break
+            if request_start_date < start: break
             request_end_date = request_start_date - datetime.timedelta(days=1)
-            while int(time.mktime(request_end_date.timetuple())) not in timestamps and request_end_date >= start_date and (request_start_date - request_end_date).days < days:
+            while int(time.mktime(request_end_date.timetuple())) not in timestamps and request_end_date >= start and (request_start_date - request_end_date).days < days:
                 request_end_date -= datetime.timedelta(days=1)
             request_end_date += datetime.timedelta(days=1)
             data = await getter(request_end_date, request_start_date)
-            if len(data) == 0: break
             result |= data
             total_data |= data
-        
-        # Fill gaps if exist
-        request_end_date = start_date
-        first_date = datetime.datetime.fromtimestamp(min(list(total_data.keys()))).date()
-        while request_end_date > first_date:
-            request_start_date = request_end_date - datetime.timedelta(days=1)
-            while int(time.mktime(request_start_date.timetuple())) in timestamps and request_start_date >= first_date:
-                request_start_date -= datetime.timedelta(days=1)
-            if request_start_date < first_date: break
-            request_end_date = request_start_date - datetime.timedelta(days=1)
-            while int(time.mktime(request_end_date.timetuple())) not in timestamps and request_end_date >= first_date and (request_start_date - request_end_date).days < days:
-                request_end_date -= datetime.timedelta(days=1)
-            request_end_date += datetime.timedelta(days=1)
-            data = await getter(request_end_date, request_start_date)
-            if len(data) > 0:
-                _LOGGER.info(f"gaps_filled: ({request_end_date.isoformat()} - {request_start_date.isoformat()})")
-                total_data |= data
+            if len(data) == 0 or data[min(list(data.keys()))] == '-': break
+            if start < start_date:
                 result = total_data
 
         _LOGGER.debug(f"END - get_data: len(result)={len(result)}")
@@ -199,53 +188,54 @@ class PvpcCoordinator:
                 if len(new_billing_periods) > 0:
                     billing_periods += new_billing_periods
                     PvpcCoordinator.save_billing_periods(BILLING_PERIODS_FILE, billing_periods)
+            if len(billing_periods) > 0:
+                update = False
+                for billing_period in reversed(billing_periods):
+                    if 'total_cost' not in billing_period:
+                        billing_period = await PvpcCoordinator.get_bill(billing_period, consumptions)
+                        if 'total_cost' in billing_period:
+                            update = True
+                if update:
+                    PvpcCoordinator.save_billing_periods(BILLING_PERIODS_FILE, billing_periods)
 
-            update = False
-            for billing_period in reversed(billing_periods):
-                if 'total_cost' not in billing_period:
-                    billing_period = await PvpcCoordinator.get_bill(billing_period, consumptions)
-                    if 'total_cost' in billing_period:
-                        update = True
-            if update:
-                PvpcCoordinator.save_billing_periods(BILLING_PERIODS_FILE, billing_periods)
+                current_billing_period = {'start_date': billing_periods[-1]['end_date'] + datetime.timedelta(days=1), 'end_date':datetime.date.today()}
+                current_billing_period = await PvpcCoordinator.get_bill(current_billing_period, consumptions)
 
-            current_billing_period = {'start_date': billing_periods[-1]['end_date'] + datetime.timedelta(days=1), 'end_date':datetime.date.today()}
-            current_billing_period = await PvpcCoordinator.get_bill(current_billing_period, consumptions)
+                current_bill_value = ''
+                bills_description = ''
+                if 'total_cost' in current_billing_period and current_billing_period['total_cost'] != '-':
+                    billing_periods.append(current_billing_period)
+                    current_bill_value = '%.2f' % current_billing_period['total_cost']
+                    days = (current_billing_period['end_date'] - current_billing_period['start_date']).days + 1
 
-            current_bill_value = ''
-            bills_description = ''
-            if 'total_cost' in current_billing_period and current_billing_period['total_cost'] != '-':
-                billing_periods.append(current_billing_period)
-                current_bill_value = '%.2f' % current_billing_period['total_cost']
-                days = (current_billing_period['end_date'] - current_billing_period['start_date']).days + 1
+                    estimation_days = 30
+                    if estimation_days > days:
+                        estimation_end_date = current_billing_period['start_date'] + datetime.timedelta(days=estimation_days-1)
+                        cost = round(current_billing_period['total_cost'] / days * estimation_days, 2)
+                        bills_description += f"Estimación {current_billing_period['start_date'].strftime('%d/%m')} - {estimation_end_date.strftime('%d/%m')} ({estimation_days} días): **{cost} €**\n\n"
+                    
+                bills_description += '| Fecha | Días | Importe | kWh | kWh/día | cent/kWh | €/día |\n'
+                bills_description += '| :---: | :---: | :---: | :---: | :---: | :---: | :---: |'
+                for billing_period in reversed(billing_periods[-PvpcCoordinator.bills_number:]):
+                    date = billing_period['end_date'].strftime('%d/%m')
+                    days = (billing_period['end_date'] - billing_period['start_date']).days + 1
+                    consumption = round(billing_period['total_consumption'], 0)
+                    day_consumption = round(billing_period['total_consumption'] / days, 1)
+                    cost = ''
+                    cost_kwh = ''
+                    day_cost = ''
+                    if 'total_cost' in billing_period and billing_period['total_cost'] != '-':
+                        cost = round(billing_period['total_cost'], 2)
+                        cost_kwh = round(billing_period['energy_cost'] / billing_period['total_consumption'] * 100, 1)
+                        day_cost = round(billing_period['total_cost'] / days, 2)
+                    if billing_period == current_billing_period:
+                        bills_description += f"\n|\n| {date} | {days} | {cost} | {consumption} | {day_consumption} | **{cost_kwh}** | {day_cost} |\n|"
+                    else:
+                        bills_description += f"\n| {date} | {days} | {cost} | {consumption} | {day_consumption} | {cost_kwh} | {day_cost} |"
 
-                estimation_days = 30
-                if estimation_days > days:
-                    estimation_end_date = current_billing_period['start_date'] + datetime.timedelta(days=estimation_days-1)
-                    cost = round(current_billing_period['total_cost'] / days * estimation_days, 2)
-                    bills_description += f"Estimación {current_billing_period['start_date'].strftime('%d/%m')} - {estimation_end_date.strftime('%d/%m')} ({estimation_days} días): **{cost} €**\n\n"
-                
-            bills_description += '| Fecha | Días | Importe | kWh | cent/kWh | €/día | kWh/día |\n'
-            bills_description += '| :---: | :---: | :---: | :---: | :---: | :---: | :---: |'
-            for billing_period in reversed(billing_periods[-PvpcCoordinator.bills_number:]):
-                date = billing_period['end_date'].strftime('%d/%m')
-                days = (billing_period['end_date'] - billing_period['start_date']).days + 1
-                consumption = round(billing_period['total_consumption'], 0)
-                day_consumption = round(billing_period['total_consumption'] / days, 1)
-                cost = ''
-                cost_kwh = ''
-                day_cost = ''
-                if 'total_cost' in billing_period and billing_period['total_cost'] != '-':
-                    cost = round(billing_period['total_cost'], 2)
-                    cost_kwh = round(billing_period['energy_cost'] / billing_period['total_consumption'] * 100, 1)
-                    day_cost = round(billing_period['total_cost'] / days, 2)
-                if billing_period == current_billing_period:
-                    bills_description += f"\n|\n| {date} | {days} | {cost} | {consumption} | **{cost_kwh}** | {day_cost} | {day_consumption} |\n|"
-                else:
-                    bills_description += f"\n| {date} | {days} | {cost} | {consumption} | {cost_kwh} | {day_cost} | {day_consumption} |"
-
-            _LOGGER.info(f"current_bill_value={current_bill_value}, bills_description={bills_description}")
-            hass.states.async_set(CURRENT_BILL_STATE, current_bill_value, {'detail': bills_description})
+                _LOGGER.info(f"current_bill_value={current_bill_value}, bills_description={bills_description}")
+                hass.states.async_set(CURRENT_BILL_STATE, current_bill_value, {'detail': bills_description})
+                print(bills_description)
         _LOGGER.debug(f"END - calculate_bills")
 
     async def get_bill(billing_period, consumptions):
@@ -255,8 +245,13 @@ class PvpcCoordinator:
         bill_consumptions = {}
         for timestamp, consumption in consumptions.items():
             if start_timestamp <= timestamp <= end_timestamp:
+                if consumption == '-':
+                    bill_consumptions = None
+                    _LOGGER.debug(f"Hour without value: timestamp={timestamp}")
+                    break
                 bill_consumptions[timestamp] = consumption
-        billing_period = await CNMC.calculate_bill(billing_period, PvpcCoordinator.cups, bill_consumptions, PvpcCoordinator.power_high, PvpcCoordinator.power_low, PvpcCoordinator.zip_code)
+        if bill_consumptions:
+            billing_period = await CNMC.calculate_bill(billing_period, PvpcCoordinator.cups, bill_consumptions, PvpcCoordinator.power_high, PvpcCoordinator.power_low, PvpcCoordinator.zip_code)
         _LOGGER.debug(f"END - get_bill: {billing_period}")
         return billing_period
 
@@ -268,11 +263,15 @@ class PvpcCoordinator:
             with open(file_path, 'r') as file:
                 file.readline()
                 for line in file:
-                    timestamp, consumption, price = line[0:-1].split(',')
+                    timestamp, consumption, price = line[0:-1].split(',')[-3:]
                     timestamp = int(timestamp)
-                    if consumption != '':
+                    if consumption == '-':
+                        consumptions[timestamp] = consumption
+                    elif consumption != '':
                         consumptions[timestamp] = float(consumption)
-                    if price != '':
+                    if price == '-':
+                        prices[timestamp] = price
+                    elif price != '':
                         prices[timestamp] = float(price)
         _LOGGER.debug(f"END - load_energy_data: len(consumptions): {len(consumptions)}, len(prices): {len(prices)}")
         return consumptions, prices
@@ -283,11 +282,12 @@ class PvpcCoordinator:
         timestamps = timestamps + list(set(list(prices.keys())) - set(timestamps))
         timestamps.sort()
         with open(file_path, 'w') as file:
-            file.write("timestamp,consumption,price\n")
+            file.write("date,timestamp,consumption,price\n")
             for timestamp in timestamps:
+                date = datetime.datetime.fromtimestamp(timestamp).strftime('%d/%m/%Y %H')
                 consumption = '' if timestamp not in consumptions else consumptions[timestamp]
                 price = '' if timestamp not in prices else prices[timestamp]
-                file.write(f"{timestamp},{consumption},{price}\n")
+                file.write(f"{date},{timestamp},{consumption},{price}\n")
         _LOGGER.debug(f"END - save_energy_data")
 
     def load_billing_periods(file_path):
@@ -337,29 +337,30 @@ class PvpcCoordinator:
         timestamps = list(consumptions.keys())
         timestamps.sort()
         for timestamp in timestamps:
-            consumption = consumptions[timestamp]
-            total_energy_consumption += consumption
-            day_energy_consumption += consumption
-            if datetime.datetime.fromtimestamp(timestamp).hour == 0:
-                day_energy_consumption = consumption
-            start = datetime.datetime.utcfromtimestamp(timestamp).replace(tzinfo=datetime.timezone.utc)
-            consumption_statistics.append(
-                StatisticData(
-                    start=start, state=day_energy_consumption, sum=total_energy_consumption
-                )
-            )
-
-            if timestamp in prices:
-                cost = prices[timestamp]
-                hour_cost = consumption * cost
-                total_energy_cost += hour_cost
-                day_energy_cost += hour_cost
+            if consumptions[timestamp] != '-':
+                consumption = consumptions[timestamp]
+                total_energy_consumption += consumption
+                day_energy_consumption += consumption
                 if datetime.datetime.fromtimestamp(timestamp).hour == 0:
-                    day_energy_cost = hour_cost
-                cost_statistics.append(
+                    day_energy_consumption = consumption
+                start = datetime.datetime.utcfromtimestamp(timestamp).replace(tzinfo=datetime.timezone.utc)
+                consumption_statistics.append(
                     StatisticData(
-                        start=start, state=day_energy_cost, sum=total_energy_cost
+                        start=start, state=day_energy_consumption, sum=total_energy_consumption
                     )
                 )
+
+                if timestamp in prices and prices[timestamp] != '-':
+                    cost = prices[timestamp]
+                    hour_cost = consumption * cost
+                    total_energy_cost += hour_cost
+                    day_energy_cost += hour_cost
+                    if datetime.datetime.fromtimestamp(timestamp).hour == 0:
+                        day_energy_cost = hour_cost
+                    cost_statistics.append(
+                        StatisticData(
+                            start=start, state=day_energy_cost, sum=total_energy_cost
+                        )
+                    )
         _LOGGER.debug(f"END - create_statistics: len(consumption_statistics)={len(consumption_statistics)}, len(cost_statistics)={len(cost_statistics)}")
         return consumption_statistics, cost_statistics
