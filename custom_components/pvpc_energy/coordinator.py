@@ -164,11 +164,34 @@ class PvpcCoordinator:
                 request_end_date -= datetime.timedelta(days=1)
             request_end_date += datetime.timedelta(days=1)
             data = await getter(request_end_date, request_start_date)
-            result |= data
-            total_data |= data
-            if len(data) == 0 or data[min(list(data.keys()))] == '-': break
-            if start < start_date:
-                result = total_data
+
+            if request_start_date < start_date:
+                # Fill gaps
+                if data is None:
+                    data = {}
+                elif len(data) > 0:
+                    result = total_data
+                gaps_date = request_start_date
+                while gaps_date >= request_end_date:
+                    timestamp = int(time.mktime((gaps_date + datetime.timedelta(days=1)).timetuple())) - 3600
+                    if timestamp not in data:
+                        data[timestamp] = '-'
+                        if min_timestamp < timestamp:
+                            for i in range(1, 24):
+                                data[timestamp - i * 3600] = '-'
+                        else: break
+                    gaps_date -= datetime.timedelta(days=1)
+
+            if data is not None:
+                result |= data
+                total_data |= data
+
+            if data is None or len(data) == 0:
+                break
+            else:
+                min_data = min(list(data.keys()))
+                previous_data = min_data + 3600
+                if data[min_data] == '-' and (previous_data not in data or data[previous_data] != '-'): break
 
         _LOGGER.debug(f"END - get_data: len(result)={len(result)}")
         return result
