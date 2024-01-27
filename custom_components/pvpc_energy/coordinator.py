@@ -244,24 +244,25 @@ class PvpcCoordinator:
             bills_description += '| Fecha | Días | Importe | kWh | kWh/día | cent/kWh | €/día |\n'
             bills_description += '| :---: | :---: | :---: | :---: | :---: | :---: | :---: |'
             for billing_period in reversed(billing_periods[-PvpcCoordinator.bills_number:]):
-                date = billing_period['end_date'].strftime('%d/%m')
-                days = (billing_period['end_date'] - billing_period['start_date']).days + 1
-                consumption = round(billing_period['total_consumption'], 0)
-                day_consumption = round(billing_period['total_consumption'] / days, 1)
-                cost = ''
-                cost_kwh = ''
-                day_cost = ''
                 if 'total_cost' in billing_period and billing_period['total_cost'] != '-':
-                    cost = round(billing_period['total_cost'], 2)
-                    cost_kwh = round(billing_period['energy_cost'] / billing_period['total_consumption'] * 100, 1)
-                    day_cost = round(billing_period['total_cost'] / days, 2)
-                if billing_period == current_billing_period:
-                    bills_description += f"\n|\n| {date} | {days} | {cost} | {consumption} | {day_consumption} | **{cost_kwh}** | {day_cost} |\n|"
-                else:
-                    bills_description += f"\n| {date} | {days} | {cost} | {consumption} | {day_consumption} | {cost_kwh} | {day_cost} |"
+                    date = billing_period['end_date'].strftime('%d/%m')
+                    days = (billing_period['end_date'] - billing_period['start_date']).days + 1
+                    consumption = round(billing_period['total_consumption'], 0)
+                    day_consumption = round(billing_period['total_consumption'] / days, 1)
+                    cost = ''
+                    cost_kwh = ''
+                    day_cost = ''
+                    if 'total_cost' in billing_period and billing_period['total_cost'] != '-':
+                        cost = round(billing_period['total_cost'], 2)
+                        cost_kwh = round(billing_period['energy_cost'] / billing_period['total_consumption'] * 100, 1)
+                        day_cost = round(billing_period['total_cost'] / days, 2)
+                    if billing_period == current_billing_period:
+                        bills_description += f"\n|\n| {date} | {days} | {cost} | {consumption} | {day_consumption} | **{cost_kwh}** | {day_cost} |\n|"
+                    else:
+                        bills_description += f"\n| {date} | {days} | {cost} | {consumption} | {day_consumption} | {cost_kwh} | {day_cost} |"
 
-                _LOGGER.info(f"current_bill_value={current_bill_value}, bills_description={bills_description}")
-                hass.states.async_set(CURRENT_BILL_STATE, current_bill_value, {'detail': bills_description})
+            _LOGGER.info(f"current_bill_value={current_bill_value}, bills_description={bills_description}")
+            hass.states.async_set(CURRENT_BILL_STATE, current_bill_value, {'detail': bills_description})
         _LOGGER.debug(f"END - calculate_bills")
 
     async def get_bill(billing_period, consumptions):
