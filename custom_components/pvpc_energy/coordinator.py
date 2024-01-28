@@ -128,7 +128,7 @@ class PvpcCoordinator:
             await get_instance(hass).async_add_executor_job(async_add_external_statistics, hass, cost_metadata, cost_statistics)
             await PvpcCoordinator.calculate_bills(billing_periods, consumptions, hass)
         elif not hass.states.get(CURRENT_BILL_STATE):
-            billing_periods = await PvpcCoordinator.get_billing_periods()
+            billing_periods = await PvpcCoordinator.get_billing_periods(first_consumption_date)
             await PvpcCoordinator.calculate_bills(billing_periods, consumptions, hass)
 
         _LOGGER.debug(f"END - import_energy_data")
