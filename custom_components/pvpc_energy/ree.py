@@ -30,8 +30,8 @@ class REE:
                 if resp.status == 200:
                     response = await resp.json()
                 if response is not None:
+                    result = {}
                     if len(response['indicator']['values']) > 0:
-                        result = {}
                         for value in response['indicator']['values']:
                             result[int(datetime.datetime.fromisoformat(value['datetime']).timestamp())] = round(value['value'] / 1000, 5)
 
