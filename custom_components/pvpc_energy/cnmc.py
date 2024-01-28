@@ -23,9 +23,7 @@ class CNMC:
         _LOGGER.debug(f"START - CNMC.calculate_bill(cups={cups}, len(consumptions)={len(consumptions)}, power_high={power_high}, power_low={power_low}, zip_code={zip_code})")
         timestamps = list(consumptions.keys())
         timestamps.sort()
-        billing_period['start_date'] = datetime.datetime.fromtimestamp(timestamps[0]).date()
-        billing_period['end_date'] = datetime.datetime.fromtimestamp(timestamps[-1]).date()
-        if len(consumptions) > 24:
+        if len(consumptions) > 24 and billing_period['start_date'] == datetime.datetime.fromtimestamp(timestamps[0]).date() and billing_period['end_date'] == datetime.datetime.fromtimestamp(timestamps[-1]).date():
             correlative_timestamps = True
             for i in range(1, len(timestamps)):
                 if timestamps[i-1] + 3600 != timestamps[i]:

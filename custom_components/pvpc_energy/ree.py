@@ -1,4 +1,4 @@
-import time
+import datetime
 import aiohttp
 import logging
 
@@ -33,8 +33,7 @@ class REE:
                     if len(response['indicator']['values']) > 0:
                         result = {}
                         for value in response['indicator']['values']:
-                            timestamp = int(time.mktime(time.strptime(value['datetime'][:13], '%Y-%m-%dT%H')))
-                            result[timestamp] = round(value['value'] / 1000, 5)
+                            result[int(datetime.datetime.fromisoformat(value['datetime']).timestamp())] = round(value['value'] / 1000, 5)
 
         _LOGGER.debug(f"END - REE.pvpc: len(result)={'None' if result is None else len(result)}")
         return result
