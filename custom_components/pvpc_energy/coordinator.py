@@ -76,11 +76,13 @@ class PvpcCoordinator:
         end_date = datetime.date.today() - datetime.timedelta(days=2)
 
         first_consumption_date = None
+        if consumptions_len > 0:
+            first_consumption_date = datetime.datetime.fromtimestamp(min(list(consumptions.keys()))).date()
+
         start_date = datetime.date.min
         if consumptions_len > 0 and consumptions[min(list(consumptions.keys()))] == '-':
             start_date = datetime.datetime.fromtimestamp(min(list(consumptions.keys()))).date() + datetime.timedelta(days=1)
-            first_consumption_date = start_date
-        billing_periods = await PvpcCoordinator.get_billing_periods(first_consumption_date)
+        billing_periods = await PvpcCoordinator.get_billing_periods(start_date)
         if end_date >= start_date:
             await PvpcCoordinator.get_data(UFD.consumptions, start_date, end_date, consumptions, 14)
         
@@ -126,7 +128,6 @@ class PvpcCoordinator:
             await get_instance(hass).async_add_executor_job(async_add_external_statistics, hass, cost_metadata, cost_statistics)
             await PvpcCoordinator.calculate_bills(billing_periods, consumptions, hass)
         elif not hass.states.get(CURRENT_BILL_STATE):
-            billing_periods = await PvpcCoordinator.get_billing_periods(first_consumption_date)
             await PvpcCoordinator.calculate_bills(billing_periods, consumptions, hass)
 
         _LOGGER.debug(f"END - import_energy_data")
@@ -352,7 +353,7 @@ class PvpcCoordinator:
         _LOGGER.debug(f"END - save_billing_periods")
 
     def create_statistics(last_statistic_timestamp, consumptions, prices, total_energy_consumption, total_energy_cost):
-        _LOGGER.debug(f"START - create_statistics(last_statistic_timestamp={last_statistic_timestamp, }len(consumptions)={len(consumptions)}, len(prices)={len(prices)}, total_energy_consumption={total_energy_consumption}, total_energy_cost={total_energy_cost})")
+        _LOGGER.debug(f"START - create_statistics(last_statistic_timestamp={last_statistic_timestamp}, len(consumptions)={len(consumptions)}, len(prices)={len(prices)}, total_energy_consumption={total_energy_consumption}, total_energy_cost={total_energy_cost})")
         day_energy_consumption = 0
         day_energy_cost = 0
         consumption_statistics = []
