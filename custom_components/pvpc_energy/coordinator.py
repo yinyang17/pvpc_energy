@@ -73,16 +73,14 @@ class PvpcCoordinator:
         consumptions_len = len(consumptions)
         prices_len = len(prices)
 
-        first_consumption_date = None
-        if consumptions_len > 0:
-            first_consumption_date = datetime.datetime.fromtimestamp(min(list(consumptions.keys()))).date()
-        billing_periods = await PvpcCoordinator.get_billing_periods(first_consumption_date)
-
         end_date = datetime.date.today() - datetime.timedelta(days=2)
 
+        first_consumption_date = None
         start_date = datetime.date.min
         if consumptions_len > 0 and consumptions[min(list(consumptions.keys()))] == '-':
             start_date = datetime.datetime.fromtimestamp(min(list(consumptions.keys()))).date() + datetime.timedelta(days=1)
+            first_consumption_date = start_date
+        billing_periods = await PvpcCoordinator.get_billing_periods(first_consumption_date)
         if end_date >= start_date:
             await PvpcCoordinator.get_data(UFD.consumptions, start_date, end_date, consumptions, 14)
         
@@ -168,7 +166,7 @@ class PvpcCoordinator:
         _LOGGER.debug(f"END - get_data: new_data=={len(data)-data_len}")
 
     async def get_billing_periods(first_consumption_date):
-        _LOGGER.debug(f"START - get_billing_periods()")
+        _LOGGER.debug(f"START - get_billing_periods(first_consumption_date={first_consumption_date})")
         billing_periods = PvpcCoordinator.load_billing_periods(BILLING_PERIODS_FILE)
 
         if first_consumption_date:
