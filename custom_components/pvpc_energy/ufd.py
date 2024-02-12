@@ -39,14 +39,32 @@ class UFD:
 
     async def getHeaders(session):
         headers = {
+            'authority': 'api.ufd.es',
+            'accept': '*/*',
+            'accept-language': 'es-ES,es;q=0.5',
+            'access-control-allow-headers': 'Origin, X-Requested-With, Content-Type, Accept',
+            'access-control-allow-origin': '*',
+            'cache-control': 'no-cache',
+            'content-encoding': 'gzip',
+            'content-type': 'application/json',
+            'origin': 'https://areaprivada.ufd.es',
+            'pragma': 'no-cache',
+            'referer': 'https://areaprivada.ufd.es/',
+            'sec-ch-ua': '"Not A(Brand";v="99", "Brave";v="121", "Chromium";v="121"',
+            'sec-ch-ua-mobile': '?1',
+            'sec-ch-ua-platform': '"Android"',
+            'sec-fetch-dest': 'empty',
+            'sec-fetch-mode': 'cors',
+            'sec-fetch-site': 'same-site',
+            'sec-gpc': '1',
+            'user-agent': 'Mozilla/5.0 (Linux; Android 8.0.0; SM-G955U Build/R16NW) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/116.0.0.0 Mobile Safari/537.36',
+
             'X-Application': UFD.Application,
             'X-Appclientid': UFD.Appclientid,
             'X-MessageId': UFD.getMessageId(),
             'X-AppClientSecret': UFD.AppClientSecret,
             'X-AppClient': UFD.AppClient,
             'X-Appversion': UFD.Appversion,
-            'Content-Type': 'application/json',
-            'User-Agent': 'Mozilla/5.0 (Linux; Android 8.0.0; SM-G955U Build/R16NW) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/87.0.4280.141 Mobile Safari/537.36'
         }
         if UFD.token == '':
             payload = {'user': UFD.User, 'password': UFD.Password}
