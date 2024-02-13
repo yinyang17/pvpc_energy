@@ -134,17 +134,16 @@ class PvpcCoordinator:
 
     async def get_data(getter, start_date, end_date, data, days):
         _LOGGER.debug(f"START - get_data(getter={getter}, start_date={start_date.isoformat()}, end_date={end_date.isoformat()}, len(data)={len(data)}, days={days})")    
-        timestamps = data.keys()
         data_len = len(data)
         
         request_start_date = end_date + datetime.timedelta(days=1)
         while request_start_date > start_date:
             request_end_date = request_start_date - datetime.timedelta(days=1)
-            while int(time.mktime(request_end_date.timetuple())) in timestamps and request_end_date >= start_date:
+            while int(time.mktime(request_end_date.timetuple())) in data.keys() and request_end_date >= start_date:
                 request_end_date -= datetime.timedelta(days=1)
             if request_end_date < start_date: break
             request_start_date = request_end_date - datetime.timedelta(days=1)
-            while int(time.mktime(request_start_date.timetuple())) not in timestamps and request_start_date >= start_date and (request_end_date - request_start_date).days < days:
+            while int(time.mktime(request_start_date.timetuple())) not in data.keys() and request_start_date >= start_date and (request_end_date - request_start_date).days < days:
                 request_start_date -= datetime.timedelta(days=1)
             request_start_date += datetime.timedelta(days=1)
             new_data = await getter(request_start_date, request_end_date)
@@ -154,9 +153,9 @@ class PvpcCoordinator:
             elif len(new_data) > 0:
                 data |= new_data
             else:
-                first_data_day = datetime.datetime.fromtimestamp(min(list(timestamps))).date()
+                first_data_day = datetime.datetime.fromtimestamp(min(list(data.keys()))).date()
                 if request_end_date < first_data_day:
-                    data[int(time.mktime((request_end_date + datetime.timedelta(days=1)).timetuple())) - 3600] = '-'
+                    data[min(list(data.keys())) - 3600] = '-'
                 elif request_start_date > first_data_day:
                     timestamp = int(time.mktime((request_start_date).timetuple()))
                     end_timestamp = int(time.mktime((request_end_date).timetuple()))
@@ -289,7 +288,7 @@ class PvpcCoordinator:
                     timestamp, consumption, price = line[0:-1].split(',')[-3:]
                     timestamp = int(timestamp)
                     if consumption == '-':
-                        if (datetime.datetime.today() - datetime.datetime.fromtimestamp(timestamp)).days >= 750:
+                        if (datetime.datetime.today() - datetime.datetime.fromtimestamp(timestamp)).days >= 600:
                             consumptions[timestamp] = consumption
                     elif consumption != '':
                         consumptions[timestamp] = float(consumption)
