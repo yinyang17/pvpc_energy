@@ -160,10 +160,13 @@ class UFD:
                 if resp.status == 200:
                     response = await resp.json()
                     _LOGGER.debug(f"response={response}")
-                    UFD.cups = response['supplyPoints']['items'][0]['cups']
-                    UFD.power_high = float(response['supplyPoints']['items'][0]['power1'])
-                    UFD.power_low = float(response['supplyPoints']['items'][0]['power2'])
-                    UFD.zip_code = response['supplyPoints']['items'][0]['address']['zipCode']
-                    _LOGGER.debug(f"cups={UFD.cups}, power_high={UFD.power_high}, power_low={UFD.power_low}")
+                    for supplyPoint in response['supplyPoints']['items']:
+                        if supplyPoint['power1'] != '' and supplyPoint['power1'] != '':
+                            UFD.cups = supplyPoint['cups']
+                            UFD.power_high = float(supplyPoint['power1'])
+                            UFD.power_low = float(supplyPoint['power2'])
+                            UFD.zip_code = supplyPoint['address']['zipCode']
+                            _LOGGER.debug(f"cups={UFD.cups}, power_high={UFD.power_high}, power_low={UFD.power_low}")
+                            break
         _LOGGER.debug(f"END - UFD.supplypoints()")
     
