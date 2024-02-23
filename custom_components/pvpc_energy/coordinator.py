@@ -219,7 +219,7 @@ class PvpcCoordinator:
                 PvpcCoordinator.save_billing_periods(BILLING_PERIODS_FILE, billing_periods)
 
             current_billing_period = None
-            if (last_consumption_date - billing_periods[-1]['end_date']).days > 2:
+            if (last_consumption_date - billing_periods[-1]['end_date']).days >= 2:
                 current_billing_period = {'start_date': billing_periods[-1]['end_date'] + datetime.timedelta(days=1), 'end_date':last_consumption_date}
                 current_billing_period = await PvpcCoordinator.get_bill(current_billing_period, consumptions)
 
