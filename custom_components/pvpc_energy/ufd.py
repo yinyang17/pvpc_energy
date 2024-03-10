@@ -153,6 +153,7 @@ class UFD:
 
     async def supplypoints():
         _LOGGER.debug(f"START - UFD.supplypoints()")
+        result = {}
         async with aiohttp.ClientSession() as session:
             headers = await UFD.getHeaders(session)
             url = UFD.supplypoints_url.format(nif=UFD.nif)
@@ -162,11 +163,12 @@ class UFD:
                     _LOGGER.debug(f"response={response}")
                     for supplyPoint in response['supplyPoints']['items']:
                         if supplyPoint['power1'] != '' and supplyPoint['power1'] != '':
-                            UFD.cups = supplyPoint['cups']
-                            UFD.power_high = float(supplyPoint['power1'])
-                            UFD.power_low = float(supplyPoint['power2'])
-                            UFD.zip_code = supplyPoint['address']['zipCode']
+                            result[supplyPoint['cups']] = {
+                                'cups': supplyPoint['cups'],
+                                'power_high': float(supplyPoint['power1']),
+                                'power_low': float(supplyPoint['power2']),
+                                'zip_code': supplyPoint['address']['zipCode']
+                            }
                             _LOGGER.debug(f"cups={UFD.cups}, power_high={UFD.power_high}, power_low={UFD.power_low}")
-                            break
         _LOGGER.debug(f"END - UFD.supplypoints()")
-    
+        return result

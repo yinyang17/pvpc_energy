@@ -11,7 +11,7 @@
       },
       "cups": {
         "title": "UFD",
-        "description": "Introduce el número de facturas para la tarjeta Markdown",
+        "description": "Indica el CUPS y el número de facturas para la tarjeta Markdown",
         "data": {
           "bills_number": "Número de facturas"
         }

@@ -11,7 +11,7 @@
       },
       "cups": {
         "title": "UFD",
-        "description": "Enter de number of bills to show in Markdown Card",
+        "description": "Enter the CUPS and the number of bills to show in Markdown Card",
         "data": {
           "bills_number": "Number of bills"
         }

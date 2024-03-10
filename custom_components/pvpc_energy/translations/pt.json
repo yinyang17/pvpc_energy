@@ -11,7 +11,7 @@
       },
       "cups": {
         "title": "UFD",
-        "description": "Inserir o número de contas para mostar",
+        "description": "Insira o CUPS e o número de contas a serem exibidas no Markdown Card",
         "data": {
           "bills_number": "Número de Contas"
         }
