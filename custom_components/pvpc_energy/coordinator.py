@@ -351,7 +351,7 @@ class PvpcCoordinator:
         day_energy_cost = 0
         consumption_statistics = []
         cost_statistics = []
-        timestamp = max(min(consumptions.keys()), last_statistic_timestamp)
+        timestamp = max(min(consumptions.keys()), last_statistic_timestamp + 3600)
         last_timestamp = max(consumptions.keys())
         while timestamp <= last_timestamp:
             consumption = 0
