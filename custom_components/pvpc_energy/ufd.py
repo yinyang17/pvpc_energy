@@ -114,7 +114,7 @@ class UFD:
             headers = await UFD.getHeaders(session)
             url = UFD.consumptions_url.format(nif=UFD.nif, cups=UFD.cups, start_date=start_date.strftime('%d/%m/%Y'),
                                               end_date=end_date.strftime('%d/%m/%Y'))
-            _LOGGER.debug(f"UFD.get_consumptions(start_date={start_date.isoformat()}, end_date={end_date.isoformat()})")
+            _LOGGER.info(f"UFD.get_consumptions(start_date={start_date.isoformat()}, end_date={end_date.isoformat()})")
             response = await UFD.getResponse(session, url, headers)
             if response is not None:
                 result = {}
