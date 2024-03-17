@@ -203,7 +203,6 @@ class PvpcCoordinator:
         return billing_periods
 
     async def calculate_bills(billing_periods, consumptions, hass, force_update=False):
-        force_update=True
         _LOGGER.debug(f"START - calculate_bills(len(billing_periods)={len(billing_periods)}, len(consumptions)={len(consumptions)}, force_update={force_update})")
 
         if len(consumptions) > 0 and len(billing_periods) > 0:
