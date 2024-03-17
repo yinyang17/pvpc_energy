@@ -87,7 +87,8 @@ class PvpcCoordinator:
             last_consumption_date = datetime.datetime.fromtimestamp(max(list(consumptions.keys()))).date()
             start_billing_date = min(start_date, first_consumption_date)
 
-        billing_periods = await PvpcCoordinator.get_billing_periods(start_billing_date)
+        get_new_periods = last_consumption_date is None or end_date > last_consumption_date
+        billing_periods = await PvpcCoordinator.get_billing_periods(start_billing_date, get_new_periods)
 
         if force_update or first_consumption_date is None or first_consumption_date > start_date:
             await PvpcCoordinator.get_data(UFD.consumptions, start_date, end_date, consumptions, 14, force_update)
@@ -169,14 +170,14 @@ class PvpcCoordinator:
 
         _LOGGER.debug(f"END - get_data: new_data=={len(data)-data_len}")
 
-    async def get_billing_periods(first_consumption_date):
-        _LOGGER.debug(f"START - get_billing_periods(first_consumption_date={first_consumption_date})")
+    async def get_billing_periods(start_billing_date, get_new_periods):
+        _LOGGER.debug(f"START - get_billing_periods(start_billing_date={start_billing_date}, get_new_periods={get_new_periods})")
         billing_periods = PvpcCoordinator.load_billing_periods(BILLING_PERIODS_FILE)
 
-        if first_consumption_date:
+        if start_billing_date:
             remove_periods = []
             for billing_period in billing_periods:
-                if billing_period['start_date'] < first_consumption_date:
+                if billing_period['start_date'] < start_billing_date:
                     remove_periods.append(billing_period)
             if len(remove_periods) > 0:
                 for billing_period in remove_periods:
@@ -197,7 +198,7 @@ class PvpcCoordinator:
 
         end_date = datetime.date.today()
         _LOGGER.debug(f"start_date={start_date.isoformat()}, end_date={end_date.isoformat()}, (end_date - start_date).days={(end_date - start_date).days}")
-        if (end_date - start_date).days > 25:
+        if get_new_periods and  (end_date - start_date).days > 25:
             new_billing_periods = await UFD.billingPeriods(start_date, end_date)
             if len(new_billing_periods) > 0:
                 billing_periods += new_billing_periods
