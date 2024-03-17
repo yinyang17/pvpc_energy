@@ -1,3 +1,9 @@
 import_energy_data:
+  name: Obtener nuevos datos de energía
+  description: Obtiene nuevos datos de energía desde el último día hasta dos menos del actual. Se ejecuta automáticamnete todos los días a las 7:05.
 force_import_energy_data:
-reprocess_statistics:
+  name: Forzar obtención de datos de energía
+  description: Obtiene los datos de energía (consumo y coste) de los dos últimos años y actualiza los datos existentes, las estadísticas y las facturas.
+reprocess_energy_data:
+  name: Reprocesar datos (panel de energía y facturas)
+  description: Reprocesa los datos existentes y regenera las estadísticas del panel de energía y las facturas.

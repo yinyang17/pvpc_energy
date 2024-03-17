@@ -37,7 +37,7 @@ class PvpcCoordinator:
         UFD.cups = config['cups']        
         _LOGGER.debug(f"END - set_config")
 
-    async def reprocess_statistics(hass):
+    async def reprocess_energy_data(hass):
         _LOGGER.debug(f"START - reprocess_statistics()")
         consumptions, prices = PvpcCoordinator.load_energy_data(ENERGY_FILE)
 
@@ -64,6 +64,9 @@ class PvpcCoordinator:
             _LOGGER.info(f"len(consumption_statistics)={len(consumption_statistics)}, len(cost_statistics)={len(cost_statistics)}")
             await get_instance(hass).async_add_executor_job(async_add_external_statistics, hass, consumption_metadata, consumption_statistics)
             await get_instance(hass).async_add_executor_job(async_add_external_statistics, hass, cost_metadata, cost_statistics)
+
+            billing_periods = PvpcCoordinator.load_billing_periods(BILLING_PERIODS_FILE)
+            await PvpcCoordinator.calculate_bills(billing_periods, consumptions, hass, True)
         _LOGGER.debug(f"END - reprocess_statistics()")
 
     async def import_energy_data(hass, force_update=False):
