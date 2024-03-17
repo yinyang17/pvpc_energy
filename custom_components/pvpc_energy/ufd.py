@@ -152,8 +152,8 @@ class UFD:
         _LOGGER.debug(f"START - UFD.supplypoints()")
         result = {}
         async with aiohttp.ClientSession() as session:
-            url = UFD.supplypoints_url.format(nif=UFD.nif)
             headers = await UFD.getHeaders(session)
+            url = UFD.supplypoints_url.format(nif=UFD.nif)
             response = await UFD.getResponse(session, url, headers)
             if response is not None:
                 _LOGGER.debug(f"response={response}")
