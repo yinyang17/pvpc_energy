@@ -40,5 +40,6 @@ Añade a Lovelace un Markdown card para mostrar los datos de las últimas factur
 ![Markdown card configuration](https://github.com/yinyang17/pvpc_energy/raw/main/assets/markdown-card-config.png)
 
 ## Servicios
-* import_energy_data: Se ejecuta diariamente a las 7:05 para actualizar los datos de consumo, coste y facturas
-* reprocess_statistics: Recrea las estadísticas a partir de los datos de consumo. Utilizar en caso de que se muestre algún dato incorrecto (consumos negativos, ...)
+* import_energy_data - _Obtener nuevos datos de energía_: Obtiene nuevos datos de energía desde el último día hasta dos menos del actual. Se ejecuta automáticamnete todos los días a las 7:05.
+* force_import_energy_data - _Forzar obtención de datos de energía_: Obtiene los datos de consumo y coste de los últimos 2 años y los sobreescribe (los datos existentes de más de 2 años se mantienen). Regenera todas las estadísticas y facturas.
+* reprocess_statistics - _Reprocesar datos de energía_: Regenera las estadísticas del panel de energía y las facturas.
