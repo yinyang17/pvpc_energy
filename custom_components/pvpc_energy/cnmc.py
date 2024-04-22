@@ -2,6 +2,7 @@ import datetime
 import aiohttp
 import base64
 import logging
+import re
 
 
 _LOGGER = logging.getLogger(__name__)
@@ -54,7 +55,9 @@ class CNMC:
                         elif response.startswith('Aviso:'):
                             _LOGGER.info(f"CNMC.calculate_bill: alert={response}")
                         else:
-                            energy_file = (await resp.text())[0:-8]
+                            name_search = re.search('^(\D+\d+)-.*$', response)
+                            if name_search:
+                                energy_file = name_search.group(1)
 
                     # payload = {'file': energy_file}
                     # response = await requests.post(CNMC.upload_file_url, json=payload)
