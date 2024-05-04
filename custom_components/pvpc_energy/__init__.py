@@ -19,22 +19,22 @@ async def async_setup_entry(hass, entry) -> bool:
     hass.data[DOMAIN][entry.entry_id] = hass_data
 
     await hass.async_add_executor_job(setup_hass_services, hass)
+    await hass.async_create_task(PvpcCoordinator.import_energy_data(hass))
     return True
 
 def setup_hass_services(hass) -> None:
-    def handle_import_energy_data(call):
+    async def async_handle_import_energy_data(call):
         hass.async_create_task(PvpcCoordinator.import_energy_data(hass))
-    def handle_force_import_energy_data(call):
+    async def async_handle_force_import_energy_data(call):
         hass.async_create_task(PvpcCoordinator.import_energy_data(hass, True))
-    def handle_reprocess_energy_data(call):
+    async def async_handle_reprocess_energy_data(call):
         hass.async_create_task(PvpcCoordinator.reprocess_energy_data(hass))
 
-    hass.services.register(DOMAIN, "import_energy_data", handle_import_energy_data)
-    hass.services.register(DOMAIN, "force_import_energy_data", handle_force_import_energy_data)
-    hass.services.register(DOMAIN, "reprocess_energy_data", handle_reprocess_energy_data)
+    hass.services.register(DOMAIN, "import_energy_data", async_handle_import_energy_data)
+    hass.services.register(DOMAIN, "force_import_energy_data", async_handle_force_import_energy_data)
+    hass.services.register(DOMAIN, "reprocess_energy_data", async_handle_reprocess_energy_data)
     
-    async_track_time_change(hass, handle_import_energy_data, hour=7, minute=5, second=0)
-    handle_import_energy_data(None)
+    async_track_time_change(hass, async_handle_import_energy_data, hour=7, minute=5, second=0)
 
 async def options_update_listener(hass, config_entry):
     _LOGGER.debug(f"pvpc_energy: options_update_listener, config_entry={config_entry}")
