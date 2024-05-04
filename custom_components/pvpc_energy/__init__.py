@@ -19,7 +19,7 @@ async def async_setup_entry(hass, entry) -> bool:
     hass.data[DOMAIN][entry.entry_id] = hass_data
 
     await hass.async_add_executor_job(setup_hass_services, hass)
-    await hass.async_create_task(PvpcCoordinator.import_energy_data(hass))
+    hass.async_create_task(PvpcCoordinator.import_energy_data(hass))
     return True
 
 def setup_hass_services(hass) -> None:
