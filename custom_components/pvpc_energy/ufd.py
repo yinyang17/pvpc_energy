@@ -165,5 +165,5 @@ class UFD:
                             'power_low': float(supplyPoint['power2']),
                             'zip_code': supplyPoint['address']['zipCode']
                         }
-                        _LOGGER.debug(f"cups={UFD.cups}, power_high={UFD.power_high}, power_low={UFD.power_low}")
+                        _LOGGER.debug(f"cups={supplyPoint['cups']}, power_high={float(supplyPoint['power1'])}, power_low={float(supplyPoint['power2'])}")
         return result

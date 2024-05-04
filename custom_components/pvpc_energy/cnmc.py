@@ -55,7 +55,7 @@ class CNMC:
                         elif response.startswith('Aviso:'):
                             _LOGGER.info(f"CNMC.calculate_bill: alert={response}")
                         else:
-                            name_search = re.search('^(\D+\d+)-.*$', response)
+                            name_search = re.search(r'^(\D+\d+)-.*$', response)
                             if name_search:
                                 energy_file = name_search.group(1)
 

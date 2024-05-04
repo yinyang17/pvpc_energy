@@ -252,7 +252,8 @@ class PvpcCoordinator:
                     day_cost = ''
                     if 'total_cost' in billing_period and billing_period['total_cost'] != '-':
                         cost = round(billing_period['total_cost'], 2)
-                        cost_kwh = round(billing_period['energy_cost'] / billing_period['total_consumption'] * 100, 1)
+                        if billing_period['total_consumption'] != 0:
+                            cost_kwh = round(billing_period['energy_cost'] / billing_period['total_consumption'] * 100, 1)
                         day_cost = round(billing_period['total_cost'] / days, 2)
                     if billing_period == current_billing_period:
                         bills_description += f"\n|\n| {date} | {days} | {cost} | {consumption} | {day_consumption} | **{cost_kwh}** | {day_cost} |\n|"

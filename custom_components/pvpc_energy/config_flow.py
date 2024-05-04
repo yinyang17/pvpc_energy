@@ -34,7 +34,6 @@ class PvpcEnergyConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         return self.async_show_form(step_id="user", data_schema=vol.Schema(AUTH_SCHEMA), errors=None)
     
     async def async_step_cups(self, user_input: Optional[Dict[str, Any]] = None):
-        _LOGGER.debug(f"cups: {list(self.data['cups_list'].keys())}")
         CUPS_SCHEMA['cups'] = selector({
             "select": {
                 "options": list(self.data['cups_list'].keys()),
@@ -48,7 +47,10 @@ class PvpcEnergyConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             self.data['power_low'] = supply_point['power_low']
             self.data['zip_code'] = supply_point['zip_code']
             self.data['bills_number'] = user_input['bills_number']
+            del self.data['cups_list']
 
             return self.async_create_entry(title=self.data['cups'], data=self.data)
-        
+        else:
+            _LOGGER.debug(f"cups: {list(self.data['cups_list'].keys())}")
+
         return self.async_show_form(step_id="cups", data_schema=vol.Schema(CUPS_SCHEMA), errors=None)
