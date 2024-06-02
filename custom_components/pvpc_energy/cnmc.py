@@ -20,7 +20,7 @@ class CNMC:
         }
         return headers
     
-    async def calculate_bill(billing_period, cups, consumptions, power_high, power_low, zip_code):
+    async def calculate_bill(billing_period, cups, consumptions, power_high, power_low, zip_code, path):
         _LOGGER.debug(f"START - CNMC.calculate_bill(cups={cups}, len(consumptions)={len(consumptions)}, power_high={power_high}, power_low={power_low}, zip_code={zip_code})")
         timestamps = list(consumptions.keys())
         timestamps.sort()
@@ -38,6 +38,8 @@ class CNMC:
                     date = datetime.datetime.fromtimestamp(timestamp)
                     total_consumption += consumptions[timestamp]
                     cnmc_consumptions += f"{cups};{date.strftime('%d/%m/%Y')};{date.hour + 1};{('%.3f' % consumptions[timestamp]).replace('.',',')};R\r\n"
+                with open(f"{path}/consumptions_{billing_period['start_date'].strftime('%Y-%m-%d')}.csv", 'w') as file:
+                    file.write(cnmc_consumptions)
                 encoded = base64.b64encode(bytes(cnmc_consumptions, 'utf-8')).decode('utf-8')
                 billing_period['total_consumption'] = total_consumption
 
