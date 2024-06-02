@@ -285,7 +285,7 @@ class PvpcCoordinator:
             if start_timestamp <= timestamp <= end_timestamp:
                 bill_consumptions[timestamp] = consumption
         if bill_consumptions:
-            billing_period = await CNMC.calculate_bill(billing_period, PvpcCoordinator.cups, bill_consumptions, PvpcCoordinator.power_high, PvpcCoordinator.power_low, PvpcCoordinator.zip_code, USER_FILES_PATH))
+            billing_period = await CNMC.calculate_bill(billing_period, PvpcCoordinator.cups, bill_consumptions, PvpcCoordinator.power_high, PvpcCoordinator.power_low, PvpcCoordinator.zip_code, USER_FILES_PATH)
         _LOGGER.debug(f"END - get_bill: {billing_period}")
         return billing_period
 
