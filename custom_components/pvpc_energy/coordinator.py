@@ -20,6 +20,7 @@ class PvpcCoordinator:
     power_high = None
     power_low = None
     zip_code = None
+    contract_start_date = None
     bills_number = None
 
     def set_config(config):
@@ -30,6 +31,8 @@ class PvpcCoordinator:
         PvpcCoordinator.power_high = config['power_high']
         PvpcCoordinator.power_low = config['power_low']
         PvpcCoordinator.zip_code = config['zip_code']
+        if 'contract_start_date' in config:
+            PvpcCoordinator.contract_start_date = datetime.datetime.strptime(config['contract_start_date'], '%d/%m/%Y').date()
         PvpcCoordinator.bills_number = config['bills_number']
 
         UFD.User = config['ufd_login']
@@ -77,6 +80,8 @@ class PvpcCoordinator:
         prices_len = len(prices)
 
         start_date = datetime.datetime(year=datetime.date.today().year - 2, month=datetime.date.today().month, day=1).date()
+        if PvpcCoordinator.contract_start_date:
+            start_date = PvpcCoordinator.contract_start_date
         end_date = datetime.date.today() - datetime.timedelta(days=2)
 
         first_consumption_date = None
@@ -89,6 +94,13 @@ class PvpcCoordinator:
 
         get_new_periods = last_consumption_date is None or end_date > last_consumption_date
         billing_periods = await PvpcCoordinator.get_billing_periods(start_billing_date, get_new_periods)
+
+        first_billing_date = None
+        for billing_period in billing_periods:
+            if not first_billing_date or billing_period['start_date'] < first_billing_date:
+                first_billing_date = billing_period['start_date']
+        if first_billing_date and first_billing_date > start_date:
+            start_date = first_billing_date
 
         if force_update or first_consumption_date is None or first_consumption_date > start_date:
             await PvpcCoordinator.get_data(UFD.consumptions, start_date, end_date, consumptions, 14, force_update)

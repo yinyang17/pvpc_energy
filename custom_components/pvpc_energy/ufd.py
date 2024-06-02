@@ -163,7 +163,8 @@ class UFD:
                             'cups': supplyPoint['cups'],
                             'power_high': float(supplyPoint['power1']),
                             'power_low': float(supplyPoint['power2']),
-                            'zip_code': supplyPoint['address']['zipCode']
+                            'zip_code': supplyPoint['address']['zipCode'],
+                            'contract_start_date': supplyPoint['contractStartDate']
                         }
-                        _LOGGER.debug(f"cups={supplyPoint['cups']}, power_high={float(supplyPoint['power1'])}, power_low={float(supplyPoint['power2'])}")
+                        _LOGGER.debug(f"cups={supplyPoint['cups']}, power_high={float(supplyPoint['power1'])}, power_low={float(supplyPoint['power2'])}, contract_start_date={supplyPoint['contractStartDate']}")
         return result

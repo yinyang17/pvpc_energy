@@ -46,6 +46,7 @@ class PvpcEnergyConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             self.data['power_high'] = supply_point['power_high']
             self.data['power_low'] = supply_point['power_low']
             self.data['zip_code'] = supply_point['zip_code']
+            self.data['contract_start_date'] = supply_point['contract_start_date']
             self.data['bills_number'] = user_input['bills_number']
             del self.data['cups_list']
 
