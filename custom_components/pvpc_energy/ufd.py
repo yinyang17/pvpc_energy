@@ -23,11 +23,12 @@ class UFD:
     cups = ''
     power_high = 0
     power_low = 0
-    zip_code = None
     login_url = "https://api.ufd.es/ufd/v1.0/login"
     supplypoints_url = "https://api.ufd.es/ufd/v1.0/supplypoints?filter=documentNumber::{nif}"
     billingPeriods_url = "https://api.ufd.es/ufd/v1.0/billingPeriods?filter=cups::{cups}%7CstartDate::{start_date}%7CendDate::{end_date}"
     consumptions_url = "https://api.ufd.es/ufd/v1.0/consumptions?filter=nif::{nif}%7Ccups::{cups}%7CstartDate::{start_date}%7CendDate::{end_date}%7Cgranularity::H%7Cunit::K%7Cgenerator::0%7CisDelegate::N%7CisSelfConsumption::0%7CmeasurementSystem::O"
+
+    NO_NEW_BILLS = "No existen facturas en el periodo"
 
     def getMessageId():
         if UFD.rand == '':
@@ -94,15 +95,20 @@ class UFD:
                 UFD.token = ''
                 headers = await UFD.getHeaders(session)
                 async with session.get(url, headers=headers, ssl=False) as resp:
-                    if resp.status == 200:
-                        response = await resp.json()    
-                    else:
-                        text = await resp.text()
-                        _LOGGER.error(f"status_code: {resp.status}, response: {text}")
-            elif resp.status == 200:
-                response = await resp.json()    
+                    response = await UFD.checkResponse(resp)
             else:
-                text = await resp.text()
+                response = await UFD.checkResponse(resp)
+        return response
+    
+    async def checkResponse(resp):
+        response = None
+        if resp.status == 200:
+            response = await resp.json()    
+        else:
+            text = await resp.text()
+            if UFD.NO_NEW_BILLS in text:
+                _LOGGER.debug(f"UFD.billingPeriods: NO_NEW_BILLS")
+            else:
                 _LOGGER.error(f"status_code: {resp.status}, response: {text}")
         return response
     
@@ -142,13 +148,15 @@ class UFD:
                     for billing_period in response['billingPeriods']['items']:
                         period_start_date = datetime.date.fromisoformat(billing_period['periodStartDate'])
                         period_end_date = datetime.date.fromisoformat(billing_period['periodEndDate'])
-                        result.append({'start_date': period_start_date, 'end_date': period_end_date})                        
+                        if UFD.power_high == 0 and UFD.power_low == 0:
+                            await UFD.supplyPointPowers(UFD.cups)
+                        result.append({'start_date': period_start_date, 'end_date': period_end_date, 'power_high': UFD.power_high, 'power_low': UFD.power_low})                        
             except:
                 pass
         _LOGGER.debug(f"END - UFD.billingPeriods: len(result)={len(result)}")
         return result
 
-    async def supplypoints():
+    async def supplyPoints():
         _LOGGER.debug(f"START - UFD.supplypoints()")
         result = {}
         async with aiohttp.ClientSession() as session:
@@ -167,4 +175,15 @@ class UFD:
                             'contract_start_date': supplyPoint['contractStartDate']
                         }
                         _LOGGER.debug(f"cups={supplyPoint['cups']}, power_high={float(supplyPoint['power1'])}, power_low={float(supplyPoint['power2'])}, contract_start_date={supplyPoint['contractStartDate']}")
+        _LOGGER.debug(f"END - UFD.supplypoints()")
         return result
+
+    async def supplyPointPowers(cups):
+        _LOGGER.debug(f"START - UFD.supplyPointPowers(cups={cups})")
+        if UFD.power_high == 0 and UFD.power_high == 0:
+            supplyPoints = await UFD.supplyPoints()
+            if cups in supplyPoints.keys():
+                UFD.power_high = supplyPoints[cups]['power_high']
+                UFD.power_low = supplyPoints[cups]['power_low']
+        _LOGGER.debug(f"END - UFD.supplyPointPowers: UFD.power_high={UFD.power_high}, UFD.power_low={UFD.power_low}")
+        return UFD.power_high, UFD.power_low

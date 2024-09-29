@@ -5,6 +5,8 @@ from homeassistant.const import Platform
 from .coordinator import PvpcCoordinator
 from os.path import exists
 from os import makedirs
+import asyncio
+from random import randint
 import logging
 
 _LOGGER = logging.getLogger(__name__)
@@ -23,6 +25,9 @@ async def async_setup_entry(hass, entry) -> bool:
     return True
 
 def setup_hass_services(hass) -> None:
+    async def async_handle_random_import_energy_data(call):
+        await asyncio.sleep(randint(0, 900))
+        hass.async_create_task(PvpcCoordinator.import_energy_data(hass))
     async def async_handle_import_energy_data(call):
         hass.async_create_task(PvpcCoordinator.import_energy_data(hass))
     async def async_handle_force_import_energy_data(call):
@@ -34,7 +39,7 @@ def setup_hass_services(hass) -> None:
     hass.services.register(DOMAIN, "force_import_energy_data", async_handle_force_import_energy_data)
     hass.services.register(DOMAIN, "reprocess_energy_data", async_handle_reprocess_energy_data)
     
-    async_track_time_change(hass, async_handle_import_energy_data, hour=7, minute=5, second=0)
+    async_track_time_change(hass, async_handle_random_import_energy_data, hour=7, minute=0, second=0)
 
 async def options_update_listener(hass, config_entry):
     _LOGGER.debug(f"pvpc_energy: options_update_listener, config_entry={config_entry}")

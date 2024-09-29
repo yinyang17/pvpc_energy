@@ -20,8 +20,9 @@ class CNMC:
         }
         return headers
     
-    async def calculate_bill(billing_period, cups, consumptions, power_high, power_low, zip_code, path):
-        _LOGGER.debug(f"START - CNMC.calculate_bill(cups={cups}, len(consumptions)={len(consumptions)}, power_high={power_high}, power_low={power_low}, zip_code={zip_code})")
+    async def calculate_bill(billing_period, cups, consumptions, zip_code):
+        _LOGGER.debug(f"START - CNMC.calculate_bill(cups={cups}, len(consumptions)={len(consumptions)}, power_high={billing_period['power_high']}, power_low={billing_period['power_low']}, zip_code={zip_code})")
+        cnmc_consumptions = None
         timestamps = list(consumptions.keys())
         timestamps.sort()
         if len(consumptions) > 24 and billing_period['start_date'] == datetime.datetime.fromtimestamp(timestamps[0]).date() and billing_period['end_date'] == datetime.datetime.fromtimestamp(timestamps[-1]).date():
@@ -38,8 +39,6 @@ class CNMC:
                     date = datetime.datetime.fromtimestamp(timestamp)
                     total_consumption += consumptions[timestamp]
                     cnmc_consumptions += f"{cups};{date.strftime('%d/%m/%Y')};{date.hour + 1};{('%.3f' % consumptions[timestamp]).replace('.',',')};R\r\n"
-                with open(f"{path}/consumptions_{billing_period['start_date'].strftime('%Y-%m-%d')}.csv", 'w') as file:
-                    file.write(cnmc_consumptions)
                 encoded = base64.b64encode(bytes(cnmc_consumptions, 'utf-8')).decode('utf-8')
                 billing_period['total_consumption'] = total_consumption
 
@@ -65,7 +64,7 @@ class CNMC:
                     # response = await requests.post(CNMC.upload_file_url, json=payload)
                             
                     if energy_file:
-                        url = CNMC.calculate_bill_url.format(zip_code=zip_code, power_high=str(power_high), power_low=str(power_low), energy_file=energy_file)
+                        url = CNMC.calculate_bill_url.format(zip_code=zip_code, power_high=str(billing_period['power_high']), power_low=str(billing_period['power_low']), energy_file=energy_file)
                         async with session.get(url, ssl=False) as resp:
                             bill = await resp.json()
                             if 'graficoGastoTotalActual' in bill:
@@ -79,5 +78,5 @@ class CNMC:
                                 _LOGGER.debug(f"END - CNMC.calculate_bill: result={bill['graficoGastoTotalActual']}")
                             else:
                                 _LOGGER.debug(f"END - CNMC.calculate_bill: result={bill}")
-        return billing_period
+        return billing_period, cnmc_consumptions
     

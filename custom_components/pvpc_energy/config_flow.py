@@ -28,7 +28,7 @@ class PvpcEnergyConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             UFD.User = user_input['ufd_login']
             UFD.Password = user_input['ufd_password']
             self.data = user_input
-            self.data['cups_list'] = await UFD.supplypoints()
+            self.data['cups_list'] = await UFD.supplyPoints()
             return await self.async_step_cups()
         
         return self.async_show_form(step_id="user", data_schema=vol.Schema(AUTH_SCHEMA), errors=None)
@@ -43,8 +43,6 @@ class PvpcEnergyConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             _LOGGER.debug(f"pvpc_energy: async_step_cups, user_input={user_input}")
             supply_point = self.data['cups_list'][user_input['cups']]
             self.data['cups'] = supply_point['cups']
-            self.data['power_high'] = supply_point['power_high']
-            self.data['power_low'] = supply_point['power_low']
             self.data['zip_code'] = supply_point['zip_code']
             self.data['contract_start_date'] = supply_point['contract_start_date']
             self.data['bills_number'] = user_input['bills_number']
