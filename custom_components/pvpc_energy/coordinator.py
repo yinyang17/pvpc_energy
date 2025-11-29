@@ -47,7 +47,8 @@ class PvpcCoordinator:
     
             consumption_metadata = StatisticMetaData(
                 name=CONSUMPTION_STATISTIC_NAME,
-                has_mean=False,
+                mean_type=0,
+                unit_class=None,
                 has_sum=True,
                 source=DOMAIN,
                 statistic_id=CONSUMPTION_STATISTIC_ID,
@@ -55,7 +56,8 @@ class PvpcCoordinator:
             )
             cost_metadata = StatisticMetaData(
                 name=COST_STATISTIC_NAME,
-                has_mean=False,
+                mean_type=0,
+                unit_class=None,
                 has_sum=True,
                 source=DOMAIN,
                 statistic_id=COST_STATISTIC_ID,
@@ -133,7 +135,8 @@ class PvpcCoordinator:
         
                 consumption_metadata = StatisticMetaData(
                     name=CONSUMPTION_STATISTIC_NAME,
-                    has_mean=False,
+                    mean_type=0,
+                    unit_class=None,
                     has_sum=True,
                     source=DOMAIN,
                     statistic_id=CONSUMPTION_STATISTIC_ID,
@@ -141,7 +144,8 @@ class PvpcCoordinator:
                 )
                 cost_metadata = StatisticMetaData(
                     name=COST_STATISTIC_NAME,
-                    has_mean=False,
+                    mean_type=0,
+                    unit_class=None,
                     has_sum=True,
                     source=DOMAIN,
                     statistic_id=COST_STATISTIC_ID,
