@@ -79,4 +79,3 @@ class CNMC:
                             else:
                                 _LOGGER.debug(f"END - CNMC.calculate_bill: result={bill}")
         return billing_period, cnmc_consumptions
-    

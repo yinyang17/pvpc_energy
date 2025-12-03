@@ -79,7 +79,7 @@ class PvpcCoordinator:
         prices_len = len(prices)
 
         start_date = datetime.datetime(year=datetime.date.today().year - 2, month=datetime.date.today().month, day=1).date()
-        if PvpcCoordinator.contract_start_date:
+        if PvpcCoordinator.contract_start_date and PvpcCoordinator.contract_start_date > start_date:
             start_date = PvpcCoordinator.contract_start_date
         end_date = datetime.date.today() - datetime.timedelta(days=2)
 
