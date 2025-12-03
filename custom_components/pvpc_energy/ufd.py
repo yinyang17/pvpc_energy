@@ -127,11 +127,9 @@ class UFD:
                 if 'items' in response:
                     for dayConsumption in response['items']:
                         if len(dayConsumption['consumptions']['items']) >= 23:
-                            if start_date <= datetime.datetime.strptime(dayConsumption['periodStartDate'], '%d/%m/%Y').date() <= end_date:
-                                timestamp = int(time.mktime(time.strptime(dayConsumption['periodStartDate'], '%d/%m/%Y')))
+                            if start_date <= datetime.datetime.fromisoformat(dayConsumption['periodStartDate']).date() <= end_date:
                                 for hourConsumption in dayConsumption['consumptions']['items']:
-                                    result[timestamp] = float(hourConsumption['consumptionValue'].replace(',','.'))
-                                    timestamp += 3600
+                                    result[int(datetime.datetime.fromisoformat(hourConsumption['consumptionDate']).timestamp())] = float(hourConsumption['consumptionValue'].replace(',','.'))
 
         _LOGGER.debug(f"END - UFD.consumptions: len(result)={'None' if result is None else len(result)}")
         return result
