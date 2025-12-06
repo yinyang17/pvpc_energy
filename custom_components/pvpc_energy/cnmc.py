@@ -28,7 +28,7 @@ class CNMC:
         if len(consumptions) > 24 and billing_period['start_date'] == datetime.datetime.fromtimestamp(timestamps[0]).date() and billing_period['end_date'] == datetime.datetime.fromtimestamp(timestamps[-1]).date():
             correlative_timestamps = True
             for i in range(1, len(timestamps)):
-                if timestamps[i-1] + 3600 != timestamps[i]:
+                if timestamps[i] - timestamps[i-1] > 7200:
                     _LOGGER.info(f"CNMC.calculate_bill: NOT_CORRELATIVE_TIMESTAMPS ({timestamps[i-1]} - {timestamps[i]:})")
                     correlative_timestamps = False
                     break
