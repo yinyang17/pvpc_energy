@@ -139,11 +139,17 @@ class UFD:
                                 if start_date <= datetime.datetime.strptime(dayConsumption['periodStartDate'], '%d/%m/%Y').date() <= end_date:
                                     timestamp = int(time.mktime(time.strptime(dayConsumption['periodStartDate'], '%d/%m/%Y')))
                                     for hourConsumption in dayConsumption['consumptions']['items']:
-                                        result[timestamp + 3600 * (int(hourConsumption['hour']) - 1)] = float(hourConsumption['consumptionValue'].replace(',','.'))
+                                        result[timestamp + 3600 * (int(hourConsumption['hour']) - 1)] = {
+                                            'value': float(hourConsumption['consumptionValue'].replace(',','.')),
+                                            'reading_type': hourConsumption['readingType']
+                                        }
                             else:
                                 if start_date <= datetime.datetime.fromisoformat(dayConsumption['periodStartDate']).date() <= end_date:
                                     for hourConsumption in dayConsumption['consumptions']['items']:
-                                        result[int(datetime.datetime.fromisoformat(hourConsumption['consumptionDate']).timestamp())] = float(hourConsumption['consumptionValue'].replace(',','.'))
+                                        result[int(datetime.datetime.fromisoformat(hourConsumption['consumptionDate']).timestamp())] = {
+                                           'value': float(hourConsumption['consumptionValue'].replace(',','.')),
+                                           'reading_type': hourConsumption['readingType']
+                                        }
 
         _LOGGER.debug(f"END - UFD.consumptions: len(result)={'None' if result is None else len(result)}")
         return result
