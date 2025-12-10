@@ -1,7 +1,9 @@
 from .const import DOMAIN, CURRENT_BILL_STATE, CONSUMPTION_STATISTIC_ID, CONSUMPTION_STATISTIC_NAME, COST_STATISTIC_ID, COST_STATISTIC_NAME, USER_FILES_PATH, ENERGY_FILE, BILLING_PERIODS_FILE
 from homeassistant.components.recorder import get_instance
-from homeassistant.components.recorder.models import StatisticData, StatisticMetaData
-from homeassistant.components.recorder.statistics import (async_add_external_statistics, get_last_statistics, statistics_during_period, )
+from homeassistant.components.recorder.models import (StatisticData, StatisticMeanType, StatisticMetaData,)
+from homeassistant.components.recorder.statistics import (async_add_external_statistics, get_last_statistics, statistics_during_period,)
+from homeassistant.util.unit_conversion import EnergyConverter
+from homeassistant.const import (UnitOfEnergy, CURRENCY_EURO,)
 from .ufd import UFD
 from .ree import REE
 from .cnmc import CNMC
@@ -21,6 +23,26 @@ class PvpcCoordinator:
     zip_code = None
     contract_start_date = None
     bills_number = None
+
+    consumption_metadata = StatisticMetaData(
+        name=CONSUMPTION_STATISTIC_NAME,
+        mean_type=StatisticMeanType.NONE,
+        unit_class=EnergyConverter.UNIT_CLASS,
+        has_sum=True,
+        source=DOMAIN,
+        statistic_id=CONSUMPTION_STATISTIC_ID,
+        unit_of_measurement=UnitOfEnergy.KILO_WATT_HOUR
+    )
+    cost_metadata = StatisticMetaData(
+        name=COST_STATISTIC_NAME,
+        mean_type=StatisticMeanType.NONE,
+        unit_class=None,
+        has_sum=True,
+        source=DOMAIN,
+        statistic_id=COST_STATISTIC_ID,
+        unit_of_measurement=CURRENCY_EURO,
+    )
+
 
     def set_config(config):
         _LOGGER.debug(f"START - set_config(config={config})")
@@ -44,29 +66,9 @@ class PvpcCoordinator:
         _LOGGER.info(f"len(total_consumptions)={len(consumptions)}")
         if len(consumptions) > 0:
             consumption_statistics, cost_statistics = PvpcCoordinator.create_statistics(0, consumptions, prices, 0, 0)
-    
-            consumption_metadata = StatisticMetaData(
-                name=CONSUMPTION_STATISTIC_NAME,
-                mean_type=0,
-                unit_class=None,
-                has_sum=True,
-                source=DOMAIN,
-                statistic_id=CONSUMPTION_STATISTIC_ID,
-                unit_of_measurement='kWh'
-            )
-            cost_metadata = StatisticMetaData(
-                name=COST_STATISTIC_NAME,
-                mean_type=0,
-                unit_class=None,
-                has_sum=True,
-                source=DOMAIN,
-                statistic_id=COST_STATISTIC_ID,
-                unit_of_measurement='EUR',
-            )
             _LOGGER.info(f"len(consumption_statistics)={len(consumption_statistics)}, len(cost_statistics)={len(cost_statistics)}")
-            get_instance(hass).async_add_executor_job(async_add_external_statistics, hass, consumption_metadata, consumption_statistics)
-            get_instance(hass).async_add_executor_job(async_add_external_statistics, hass, cost_metadata, cost_statistics)
-
+            get_instance(hass).async_add_executor_job(async_add_external_statistics, hass, PvpcCoordinator.consumption_metadata, consumption_statistics)
+            get_instance(hass).async_add_executor_job(async_add_external_statistics, hass, PvpcCoordinator.cost_metadata, cost_statistics)
             billing_periods = await PvpcCoordinator.load_billing_periods(hass, BILLING_PERIODS_FILE)
             await PvpcCoordinator.calculate_bills(hass, billing_periods, consumptions, True)
         _LOGGER.debug(f"END - reprocess_statistics()")
@@ -132,28 +134,10 @@ class PvpcCoordinator:
                     last_statistic_timestamp = stats[COST_STATISTIC_ID][0]["start"]
                     _LOGGER.info(f"last_stat={last_stat}, stats={stats}")
                     consumption_statistics, cost_statistics = PvpcCoordinator.create_statistics(last_statistic_timestamp, consumptions, prices, total_energy_consumption, total_energy_cost)
-        
-                consumption_metadata = StatisticMetaData(
-                    name=CONSUMPTION_STATISTIC_NAME,
-                    mean_type=0,
-                    unit_class=None,
-                    has_sum=True,
-                    source=DOMAIN,
-                    statistic_id=CONSUMPTION_STATISTIC_ID,
-                    unit_of_measurement='kWh'
-                )
-                cost_metadata = StatisticMetaData(
-                    name=COST_STATISTIC_NAME,
-                    mean_type=0,
-                    unit_class=None,
-                    has_sum=True,
-                    source=DOMAIN,
-                    statistic_id=COST_STATISTIC_ID,
-                    unit_of_measurement='EUR',
-                )
+
                 _LOGGER.info(f"len(consumption_statistics)={len(consumption_statistics)}, len(cost_statistics)={len(cost_statistics)}")
-                get_instance(hass).async_add_executor_job(async_add_external_statistics, hass, consumption_metadata, consumption_statistics)
-                get_instance(hass).async_add_executor_job(async_add_external_statistics, hass, cost_metadata, cost_statistics)
+                get_instance(hass).async_add_executor_job(async_add_external_statistics, hass, PvpcCoordinator.consumption_metadata, consumption_statistics)
+                get_instance(hass).async_add_executor_job(async_add_external_statistics, hass, PvpcCoordinator.cost_metadata, cost_statistics)
                 await PvpcCoordinator.calculate_bills(hass, billing_periods, consumptions, force_update)
         elif not hass.states.get(CURRENT_BILL_STATE) and len(consumptions) > 0:
             await PvpcCoordinator.calculate_bills(hass, billing_periods, consumptions, force_update)
@@ -285,7 +269,7 @@ class PvpcCoordinator:
         bill_consumptions = {}
         for timestamp, consumption in consumptions.items():
             if start_timestamp <= timestamp <= end_timestamp:
-                bill_consumptions[timestamp] = consumption
+                bill_consumptions[timestamp] = consumption['value']
         if bill_consumptions:
             billing_period, consumptions_file = await CNMC.calculate_bill(billing_period, PvpcCoordinator.cups, bill_consumptions, PvpcCoordinator.zip_code)
             if consumptions_file is not None:
@@ -303,12 +287,16 @@ class PvpcCoordinator:
         prices = {}
         if exists(file_path):
             with await hass.async_add_executor_job(open, file_path, 'r') as file:
-                file.readline()
+                has_reading_type = 'reading_type' in file.readline()
                 for line in file:
-                    timestamp, consumption, price = line[0:-1].split(',')[-3:]
+                    if has_reading_type:
+                        timestamp, consumption, price, reading_type = line[0:-1].split(',')[-4:]
+                    else:
+                        timestamp, consumption, price = line[0:-1].split(',')[-3:]
+                        reading_type = ''
                     timestamp = int(timestamp)
                     if consumption != '-' and consumption != '':
-                        consumptions[timestamp] = float(consumption)
+                        consumptions[timestamp] = {'value': float(consumption), 'reading_type': reading_type}
                     if price != '-' and price != '':
                         prices[timestamp] = float(price)
         _LOGGER.debug(f"END - load_energy_data: len(consumptions): {len(consumptions)}, len(prices): {len(prices)}")
@@ -320,12 +308,13 @@ class PvpcCoordinator:
         timestamps = timestamps + list(set(list(prices.keys())) - set(timestamps))
         timestamps.sort()
         with await hass.async_add_executor_job(open, file_path, 'w') as file:
-            file.write("date,timestamp,consumption,price\n")
+            file.write("date,timestamp,consumption,price,reading_type\n")
             for timestamp in timestamps:
                 date = datetime.datetime.fromtimestamp(timestamp).strftime('%d/%m/%Y %H')
-                consumption = '' if timestamp not in consumptions else consumptions[timestamp]
+                consumption = '' if timestamp not in consumptions else consumptions[timestamp]['value']
+                reading_type = '' if timestamp not in consumptions else consumptions[timestamp]['reading_type']
                 price = '' if timestamp not in prices else prices[timestamp]
-                file.write(f"{date},{timestamp},{consumption},{price}\n")
+                file.write(f"{date},{timestamp},{consumption},{price},{reading_type}\n")
         _LOGGER.debug(f"END - save_energy_data")
 
     async def load_billing_periods(hass, file_path):
@@ -388,7 +377,7 @@ class PvpcCoordinator:
         while timestamp <= last_timestamp:
             consumption = 0
             if timestamp in consumptions:
-                consumption = consumptions[timestamp]
+                consumption = consumptions[timestamp]['value']
             total_energy_consumption += consumption
             day_energy_consumption += consumption
             if datetime.datetime.fromtimestamp(timestamp).hour == 0:
