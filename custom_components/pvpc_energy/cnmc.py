@@ -1,4 +1,5 @@
 import datetime
+import time
 import aiohttp
 import base64
 import logging
@@ -11,8 +12,8 @@ class CNMC:
     OLD_FILE = 'Aviso: El fichero de consumo introducido es demasiado antiguo. Por favor, introduzca un fichero cuya fecha inicial sea igual o posterior al uno de enero de hace dos años'
     NO_DATA = 'Aviso: No hay datos para el período de facturación'
     BAD_FILE = 'Aviso: El formato del fichero de consumo no es el correcto'
-    upload_file_url = "https://comparador.cnmc.gob.es/api/facturaluz/cargar/curvaConsumo"
-    calculate_bill_url = "https://comparador.cnmc.gob.es/api/ofertas/pvpc?tipoContador=I&codigoPostal={zip_code}&bonoSocial=false&tipoConsumidor=1&categoria=1&contador=1&potenciaPrimeraFranja={power_high}&potenciaSegundaFranja={power_low}&curvaConsumo={energy_file}&vivienda=false&tarifa=4&calculoAntiguo=false&forzarCalculoNuevo=false"
+    upload_file_url = "https://comparador.cnmc.gob.es/api/publico/facturaluz/cargar/curvaConsumo"
+    calculate_bill_url = "https://comparador.cnmc.gob.es/api/publico/ofertas/pvpc?tipoContador=I&periodoFacturacion={start_date}%2C{end_date}&codigoPostal={zip_code}&bonoSocial=false&tipoConsumidor=1&categoria=1&contador=1&potenciaPrimeraFranja={power_high}&potenciaSegundaFranja={power_low}&consumo1=0&consumo2=0&consumo3=0&curvaConsumo={energy_file}&vivienda=false&tarifa=4&calculoAntiguo=false&autoconsumo=false&perfilConsumo=0&fechaInicio={start_date}&fechaFin={end_date}&potenciaAutoconsumo=3.5&inicioPFacturacion={start_timestamp}&finPFacturacion={end_timestamp}"
 
     def getHeaders():
         headers = {
@@ -44,7 +45,7 @@ class CNMC:
 
                 async with aiohttp.ClientSession() as session:
                     energy_file = None
-                    payload = {'file': f"data:text/csv;base64,77u/{encoded}"}
+                    payload = {'file': f"data:text/csv;base64,{encoded}"}
                     async with session.post(CNMC.upload_file_url, headers=CNMC.getHeaders(), json=payload, ssl=False) as resp:
                         response = await resp.text()
                         if response == CNMC.OLD_FILE:
@@ -64,7 +65,15 @@ class CNMC:
                     # response = await requests.post(CNMC.upload_file_url, json=payload)
                             
                     if energy_file:
-                        url = CNMC.calculate_bill_url.format(zip_code=zip_code, power_high=str(billing_period['power_high']), power_low=str(billing_period['power_low']), energy_file=energy_file)
+                        url = CNMC.calculate_bill_url.format(
+                            zip_code=zip_code,
+                            power_high=str(billing_period['power_high']),
+                            power_low=str(billing_period['power_low']),
+                            energy_file=energy_file,
+                            start_date=(billing_period['start_date'] - datetime.timedelta(days=1)).isoformat(),
+                            end_date=billing_period['end_date'].isoformat(),
+                            start_timestamp=int(time.mktime((billing_period['start_date'] - datetime.timedelta(days=1)).timetuple())) * 1000,
+                            end_timestamp=int(time.mktime(billing_period['end_date'].timetuple())) * 1000)
                         async with session.get(url, ssl=False) as resp:
                             bill = await resp.json()
                             if 'graficoGastoTotalActual' in bill:
