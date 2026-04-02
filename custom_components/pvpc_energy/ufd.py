@@ -137,9 +137,12 @@ class UFD:
                             #   "consumptionDate": "03/12/2025",
                             if len(dayConsumption['periodStartDate']) == 10:
                                 if start_date <= datetime.datetime.strptime(dayConsumption['periodStartDate'], '%d/%m/%Y').date() <= end_date:
-                                    timestamp = int(time.mktime(time.strptime(dayConsumption['periodStartDate'], '%d/%m/%Y')))
                                     for hourConsumption in dayConsumption['consumptions']['items']:
-                                        result[timestamp + 3600 * (int(hourConsumption['hour']) - 1)] = {
+                                        hour = int(hourConsumption['hour'])
+                                        if len(dayConsumption['consumptions']['items']) == 23 and hour == 3:
+                                            # Si se adelanta la hora, la hora 3 de la respuesta es el consumo de de 1 a 2
+                                            hour = 2
+                                        result[int(time.mktime(time.strptime(f"{dayConsumption['periodStartDate']} {(hour - 1):02}", '%d/%m/%Y %H')))] = {
                                             'value': float(hourConsumption['consumptionValue'].replace(',','.')),
                                             'reading_type': hourConsumption['readingType']
                                         }

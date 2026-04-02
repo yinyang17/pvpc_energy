@@ -70,20 +70,20 @@ class PvpcCoordinator:
             get_instance(hass).async_add_executor_job(async_add_external_statistics, hass, PvpcCoordinator.consumption_metadata, consumption_statistics)
             get_instance(hass).async_add_executor_job(async_add_external_statistics, hass, PvpcCoordinator.cost_metadata, cost_statistics)
             billing_periods = await PvpcCoordinator.load_billing_periods(hass, BILLING_PERIODS_FILE)
-            await PvpcCoordinator.calculate_bills(hass, billing_periods, consumptions, True)
+            await PvpcCoordinator.calculate_bills(hass, billing_periods, consumptions, prices, True)
         _LOGGER.debug(f"END - reprocess_statistics()")
 
     async def import_energy_data(hass, force_update=False):
         _LOGGER.debug(f"START - import_energy_data(), force_update={force_update}")
 
-        consumptions, prices = await PvpcCoordinator.load_energy_data(hass, ENERGY_FILE)
-        consumptions_len = len(consumptions)
-        prices_len = len(prices)
-
         start_date = datetime.datetime(year=datetime.date.today().year - 2, month=datetime.date.today().month, day=1).date()
         if PvpcCoordinator.contract_start_date and PvpcCoordinator.contract_start_date > start_date:
             start_date = PvpcCoordinator.contract_start_date
         end_date = datetime.date.today() - datetime.timedelta(days=2)
+
+        consumptions, prices = await PvpcCoordinator.load_energy_data(hass, ENERGY_FILE, start_date)
+        consumptions_len = len(consumptions)
+        prices_len = len(prices)
 
         first_consumption_date = None
         last_consumption_date = None
@@ -124,10 +124,12 @@ class PvpcCoordinator:
 
             if len(consumptions) > 0:
                 last_stat = await get_instance(hass).async_add_executor_job(get_last_statistics, hass, 1, CONSUMPTION_STATISTIC_ID, True, set())
-                if force_update or last_stat is None or first_consumption_date is None or first_consumption_date != datetime.datetime.fromtimestamp(min(list(consumptions.keys()))).date():
+                if force_update or last_stat is None or first_consumption_date is None \
+                    or first_consumption_date != datetime.datetime.fromtimestamp(min(list(consumptions.keys()))).date() \
+                    or last_consumption_date != datetime.datetime.fromtimestamp(last_stat[CONSUMPTION_STATISTIC_ID][0]['start'], datetime.UTC).date():
                     consumption_statistics, cost_statistics = PvpcCoordinator.create_statistics(0, consumptions, prices, 0, 0)
                 else:
-                    start = datetime.datetime.utcfromtimestamp(last_stat[CONSUMPTION_STATISTIC_ID][0]['start']).replace(tzinfo=datetime.timezone.utc)
+                    start = datetime.datetime.fromtimestamp(last_stat[CONSUMPTION_STATISTIC_ID][0]['start'], datetime.UTC)
                     stats = await get_instance(hass).async_add_executor_job(statistics_during_period, hass, start, None, {CONSUMPTION_STATISTIC_ID, COST_STATISTIC_ID}, 'hour', None, {'sum'})
                     total_energy_consumption = stats[CONSUMPTION_STATISTIC_ID][0]["sum"]
                     total_energy_cost = stats[COST_STATISTIC_ID][0]["sum"]
@@ -138,9 +140,9 @@ class PvpcCoordinator:
                 _LOGGER.info(f"len(consumption_statistics)={len(consumption_statistics)}, len(cost_statistics)={len(cost_statistics)}")
                 get_instance(hass).async_add_executor_job(async_add_external_statistics, hass, PvpcCoordinator.consumption_metadata, consumption_statistics)
                 get_instance(hass).async_add_executor_job(async_add_external_statistics, hass, PvpcCoordinator.cost_metadata, cost_statistics)
-                await PvpcCoordinator.calculate_bills(hass, billing_periods, consumptions, force_update)
+                await PvpcCoordinator.calculate_bills(hass, billing_periods, consumptions, prices, force_update)
         elif not hass.states.get(CURRENT_BILL_STATE) and len(consumptions) > 0:
-            await PvpcCoordinator.calculate_bills(hass, billing_periods, consumptions, force_update)
+            await PvpcCoordinator.calculate_bills(hass, billing_periods, consumptions, prices, force_update)
 
         _LOGGER.debug(f"END - import_energy_data")
 
@@ -203,8 +205,8 @@ class PvpcCoordinator:
         _LOGGER.debug(f"END - get_billing_periods: len(billing_periods)={len(billing_periods)}")
         return billing_periods
 
-    async def calculate_bills(hass, billing_periods, consumptions, force_update=False):
-        _LOGGER.debug(f"START - calculate_bills(len(billing_periods)={len(billing_periods)}, len(consumptions)={len(consumptions)}, force_update={force_update})")
+    async def calculate_bills(hass, billing_periods, consumptions, prices, force_update=False):
+        _LOGGER.debug(f"START - calculate_bills(len(billing_periods)={len(billing_periods)}, len(consumptions)={len(consumptions)}, len(prices)={len(prices)}, force_update={force_update})")
 
         if len(consumptions) > 0 and len(billing_periods) > 0:
             update = False
@@ -281,7 +283,7 @@ class PvpcCoordinator:
         _LOGGER.debug(f"END - get_bill: {billing_period}")
         return billing_period
 
-    async def load_energy_data(hass, file_path):
+    async def load_energy_data(hass, file_path, start_date=None):
         _LOGGER.debug(f"START - load_energy_data(file_path={file_path})")
         consumptions = {}
         prices = {}
@@ -299,6 +301,29 @@ class PvpcCoordinator:
                         consumptions[timestamp] = {'value': float(consumption), 'reading_type': reading_type}
                     if price != '-' and price != '':
                         prices[timestamp] = float(price)
+            
+            # Comprobar que todos los días tengan consumos correctos
+            if (start_date):
+                timestamps = list(consumptions.keys())
+                timestamps.sort()
+                previous_day = datetime.datetime.fromtimestamp(timestamps[0]).date()
+                hours = 0
+                for timestamp in timestamps:
+                    day = datetime.datetime.fromtimestamp(timestamp).date()
+                    if day == previous_day:
+                        hours += 1
+                    elif hours in (23, 24, 25) or day < start_date:
+                        previous_day = day
+                        hours = 1
+                    else:
+                        # Eliminar los consumos desde previous_day
+                        new_consumptions = {}
+                        for timestamp in timestamps:
+                            if datetime.datetime.fromtimestamp(timestamp).date() < previous_day:
+                                new_consumptions[timestamp] = consumptions[timestamp]
+                        consumptions = new_consumptions
+                        break
+
         _LOGGER.debug(f"END - load_energy_data: len(consumptions): {len(consumptions)}, len(prices): {len(prices)}")
         return consumptions, prices
 
@@ -382,7 +407,7 @@ class PvpcCoordinator:
             day_energy_consumption += consumption
             if datetime.datetime.fromtimestamp(timestamp).hour == 0:
                 day_energy_consumption = consumption
-            start = datetime.datetime.utcfromtimestamp(timestamp).replace(tzinfo=datetime.timezone.utc)
+            start = datetime.datetime.fromtimestamp(timestamp, datetime.UTC)
             consumption_statistics.append(
                 StatisticData(
                     start=start, state=day_energy_consumption, sum=total_energy_consumption
