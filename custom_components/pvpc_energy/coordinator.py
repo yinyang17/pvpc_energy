@@ -306,23 +306,26 @@ class PvpcCoordinator:
             if (start_date):
                 timestamps = list(consumptions.keys())
                 timestamps.sort()
-                previous_day = datetime.datetime.fromtimestamp(timestamps[0]).date()
-                hours = 0
-                for timestamp in timestamps:
-                    day = datetime.datetime.fromtimestamp(timestamp).date()
-                    if day == previous_day:
-                        hours += 1
-                    elif hours in (23, 24, 25) or day < start_date:
-                        previous_day = day
-                        hours = 1
-                    else:
-                        # Eliminar los consumos desde previous_day
-                        new_consumptions = {}
-                        for timestamp in timestamps:
-                            if datetime.datetime.fromtimestamp(timestamp).date() < previous_day:
-                                new_consumptions[timestamp] = consumptions[timestamp]
-                        consumptions = new_consumptions
-                        break
+                if len(timestamps) > 0:
+                    previous_day = datetime.datetime.fromtimestamp(timestamps[0]).date()
+                    hours = 0
+                    for timestamp in timestamps:
+                        day = datetime.datetime.fromtimestamp(timestamp).date()
+                        if day == previous_day:
+                            hours += 1
+                        elif hours in (23, 24, 25) or day < start_date:
+                            previous_day = day
+                            hours = 1
+                        else:
+                            # Eliminar los consumos desde previous_day
+                            new_consumptions = {}
+                            for timestamp in timestamps:
+                                if datetime.datetime.fromtimestamp(timestamp).date() < previous_day:
+                                    new_consumptions[timestamp] = consumptions[timestamp]
+                            consumptions = new_consumptions
+                            break
+                else:
+                    _LOGGER.debug("load_energy_data: no hay consumos locales validos; se intentaran descargar de UFD")
 
         _LOGGER.debug(f"END - load_energy_data: len(consumptions): {len(consumptions)}, len(prices): {len(prices)}")
         return consumptions, prices
