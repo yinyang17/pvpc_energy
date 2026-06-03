@@ -61,9 +61,6 @@ class CNMC:
                             if name_search:
                                 energy_file = name_search.group(1)
 
-                    # payload = {'file': energy_file}
-                    # response = await requests.post(CNMC.upload_file_url, json=payload)
-                            
                     if energy_file:
                         url = CNMC.calculate_bill_url.format(
                             zip_code=zip_code,
