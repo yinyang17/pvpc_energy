@@ -3,6 +3,7 @@ from .const import DOMAIN, USER_FILES_PATH
 from homeassistant.helpers.event import async_track_time_change
 from homeassistant.const import Platform
 from .coordinator import PvpcCoordinator
+from .ufd import UFD
 from os.path import exists
 from os import makedirs
 import asyncio
@@ -26,7 +27,7 @@ async def async_setup_entry(hass, entry) -> bool:
 
 def setup_hass_services(hass) -> None:
     async def async_handle_random_import_energy_data(call):
-        await asyncio.sleep(randint(0, 900))
+        await asyncio.sleep(randint(0, 3600))
         hass.async_create_task(PvpcCoordinator.import_energy_data(hass))
     async def async_handle_import_energy_data(call):
         hass.async_create_task(PvpcCoordinator.import_energy_data(hass))
@@ -39,7 +40,7 @@ def setup_hass_services(hass) -> None:
     hass.services.register(DOMAIN, "force_import_energy_data", async_handle_force_import_energy_data)
     hass.services.register(DOMAIN, "reprocess_energy_data", async_handle_reprocess_energy_data)
     
-    async_track_time_change(hass, async_handle_random_import_energy_data, hour=7, minute=0, second=0)
+    async_track_time_change(hass, async_handle_random_import_energy_data, hour=6, minute=30, second=0)
 
 async def options_update_listener(hass, config_entry):
     _LOGGER.debug(f"pvpc_energy: options_update_listener, config_entry={config_entry}")
@@ -49,6 +50,7 @@ async def async_unload_entry(hass, entry) -> bool:
     _LOGGER.debug(f"pvpc_energy: async_unload_entry, entry_id={entry.entry_id}, hass_data={dict(entry.data)}")
     entry_data = hass.data[DOMAIN].pop(entry.entry_id)
     entry_data["unsub_options_update_listener"]()
+    await UFD.closeSession()
     return True
 
 def setup(hass, config):
