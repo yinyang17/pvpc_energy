@@ -104,9 +104,9 @@ class PvpcCoordinator:
             start_date = first_billing_date
 
         if force_update or first_consumption_date is None or first_consumption_date > start_date:
-            await PvpcCoordinator.get_data(UFD.consumptions, start_date, end_date, consumptions, 14, force_update)
+            await PvpcCoordinator.get_data(UFD.consumptions, start_date, end_date, consumptions, 1, force_update)
         elif end_date > last_consumption_date:
-            await PvpcCoordinator.get_data(UFD.consumptions, last_consumption_date + datetime.timedelta(days=1), end_date, consumptions, 14)
+            await PvpcCoordinator.get_data(UFD.consumptions, last_consumption_date + datetime.timedelta(days=1), end_date, consumptions, 1)
         
         first_price_date = None
         last_price_date = None
