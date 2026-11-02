@@ -45,7 +45,7 @@ class PvpcCoordinator:
 
 
     def set_config(config):
-        _LOGGER.debug(f"START - set_config(config={config})")
+        _LOGGER.debug("START - set_config")
         PvpcCoordinator.ufd_login = config['ufd_login']
         PvpcCoordinator.ufd_password = config['ufd_password']
         PvpcCoordinator.cups = config['cups']
@@ -67,8 +67,8 @@ class PvpcCoordinator:
         if len(consumptions) > 0:
             consumption_statistics, cost_statistics = PvpcCoordinator.create_statistics(0, consumptions, prices, 0, 0)
             _LOGGER.info(f"len(consumption_statistics)={len(consumption_statistics)}, len(cost_statistics)={len(cost_statistics)}")
-            get_instance(hass).async_add_executor_job(async_add_external_statistics, hass, PvpcCoordinator.consumption_metadata, consumption_statistics)
-            get_instance(hass).async_add_executor_job(async_add_external_statistics, hass, PvpcCoordinator.cost_metadata, cost_statistics)
+            async_add_external_statistics(hass, PvpcCoordinator.consumption_metadata, consumption_statistics)
+            async_add_external_statistics(hass, PvpcCoordinator.cost_metadata, cost_statistics)
             billing_periods = await PvpcCoordinator.load_billing_periods(hass, BILLING_PERIODS_FILE)
             await PvpcCoordinator.calculate_bills(hass, billing_periods, consumptions, prices, True)
         _LOGGER.debug(f"END - reprocess_statistics()")
@@ -119,27 +119,40 @@ class PvpcCoordinator:
         elif end_date > last_price_date:
             await PvpcCoordinator.get_data(REE.pvpc, last_price_date + datetime.timedelta(days=1), end_date, prices, 28)
         
-        if force_update or len(consumptions) > consumptions_len or len(prices) > prices_len:
+        last_stat = {}
+        last_cost_stat = {}
+        if consumptions:
+            last_stat = await get_instance(hass).async_add_executor_job(get_last_statistics, hass, 1, CONSUMPTION_STATISTIC_ID, True, set())
+            last_cost_stat = await get_instance(hass).async_add_executor_job(get_last_statistics, hass, 1, COST_STATISTIC_ID, True, set())
+        missing_statistics = not (last_stat or {}).get(CONSUMPTION_STATISTIC_ID) or not (last_cost_stat or {}).get(COST_STATISTIC_ID)
+
+        if force_update or len(consumptions) > consumptions_len or len(prices) > prices_len or (consumptions and missing_statistics):
             await PvpcCoordinator.save_energy_data(hass, ENERGY_FILE, consumptions, prices)
 
             if len(consumptions) > 0:
-                last_stat = await get_instance(hass).async_add_executor_job(get_last_statistics, hass, 1, CONSUMPTION_STATISTIC_ID, True, set())
-                if force_update or last_stat is None or first_consumption_date is None \
+                if force_update or missing_statistics or first_consumption_date is None \
                     or first_consumption_date != datetime.datetime.fromtimestamp(min(list(consumptions.keys()))).date() \
                     or last_consumption_date != datetime.datetime.fromtimestamp(last_stat[CONSUMPTION_STATISTIC_ID][0]['start'], datetime.UTC).date():
                     consumption_statistics, cost_statistics = PvpcCoordinator.create_statistics(0, consumptions, prices, 0, 0)
                 else:
                     start = datetime.datetime.fromtimestamp(last_stat[CONSUMPTION_STATISTIC_ID][0]['start'], datetime.UTC)
                     stats = await get_instance(hass).async_add_executor_job(statistics_during_period, hass, start, None, {CONSUMPTION_STATISTIC_ID, COST_STATISTIC_ID}, 'hour', None, {'sum'})
-                    total_energy_consumption = stats[CONSUMPTION_STATISTIC_ID][0]["sum"]
-                    total_energy_cost = stats[COST_STATISTIC_ID][0]["sum"]
-                    last_statistic_timestamp = stats[COST_STATISTIC_ID][0]["start"]
-                    _LOGGER.info(f"last_stat={last_stat}, stats={stats}")
-                    consumption_statistics, cost_statistics = PvpcCoordinator.create_statistics(last_statistic_timestamp, consumptions, prices, total_energy_consumption, total_energy_cost)
+                    consumption_rows = (stats or {}).get(CONSUMPTION_STATISTIC_ID) or []
+                    cost_rows = (stats or {}).get(COST_STATISTIC_ID) or []
+                    if (not consumption_rows or not cost_rows
+                        or consumption_rows[0].get("sum") is None
+                        or cost_rows[0].get("sum") is None
+                        or consumption_rows[0]["start"] != cost_rows[0]["start"]):
+                        consumption_statistics, cost_statistics = PvpcCoordinator.create_statistics(0, consumptions, prices, 0, 0)
+                    else:
+                        total_energy_consumption = consumption_rows[0]["sum"]
+                        total_energy_cost = cost_rows[0]["sum"]
+                        last_statistic_timestamp = cost_rows[0]["start"]
+                        consumption_statistics, cost_statistics = PvpcCoordinator.create_statistics(last_statistic_timestamp, consumptions, prices, total_energy_consumption, total_energy_cost)
 
                 _LOGGER.info(f"len(consumption_statistics)={len(consumption_statistics)}, len(cost_statistics)={len(cost_statistics)}")
-                get_instance(hass).async_add_executor_job(async_add_external_statistics, hass, PvpcCoordinator.consumption_metadata, consumption_statistics)
-                get_instance(hass).async_add_executor_job(async_add_external_statistics, hass, PvpcCoordinator.cost_metadata, cost_statistics)
+                async_add_external_statistics(hass, PvpcCoordinator.consumption_metadata, consumption_statistics)
+                async_add_external_statistics(hass, PvpcCoordinator.cost_metadata, cost_statistics)
                 await PvpcCoordinator.calculate_bills(hass, billing_periods, consumptions, prices, force_update)
         elif not hass.states.get(CURRENT_BILL_STATE) and len(consumptions) > 0:
             await PvpcCoordinator.calculate_bills(hass, billing_periods, consumptions, prices, force_update)
@@ -290,17 +303,27 @@ class PvpcCoordinator:
         if exists(file_path):
             with await hass.async_add_executor_job(open, file_path, 'r') as file:
                 has_reading_type = 'reading_type' in file.readline()
-                for line in file:
-                    if has_reading_type:
-                        timestamp, consumption, price, reading_type = line[0:-1].split(',')[-4:]
-                    else:
-                        timestamp, consumption, price = line[0:-1].split(',')[-3:]
-                        reading_type = ''
-                    timestamp = int(timestamp)
-                    if consumption != '-' and consumption != '':
-                        consumptions[timestamp] = {'value': float(consumption), 'reading_type': reading_type}
-                    if price != '-' and price != '':
-                        prices[timestamp] = float(price)
+                for line_number, line in enumerate(file, start=2):
+                    line = line.rstrip('\r\n')
+                    if not line.strip():
+                        continue
+                    fields = line.split(',')
+                    expected_fields = 5 if has_reading_type else 4
+                    if len(fields) != expected_fields:
+                        _LOGGER.warning("Ignoring malformed energy CSV row %s: expected %s fields, got %s", line_number, expected_fields, len(fields))
+                        continue
+                    try:
+                        timestamp = int(fields[1])
+                        consumption = float(fields[2]) if fields[2] not in ('', '-') else None
+                        price = float(fields[3]) if fields[3] not in ('', '-') else None
+                    except ValueError:
+                        _LOGGER.warning("Ignoring invalid numeric values in energy CSV row %s", line_number)
+                        continue
+                    reading_type = fields[4] if has_reading_type else ''
+                    if consumption is not None:
+                        consumptions[timestamp] = {'value': consumption, 'reading_type': reading_type}
+                    if price is not None:
+                        prices[timestamp] = price
             
             # Comprobar que todos los días tengan consumos correctos
             if (start_date):
